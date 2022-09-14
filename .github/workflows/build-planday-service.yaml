@@ -125,7 +125,7 @@ jobs:
           echo "$status"
       
       - name: Update the Pull Request with the SonarQube scan result
-        uses: actions/github-script@6
+        uses: actions/github-script@v6
         if: github.event_name == 'pull_request'
         env:
           status: "${{ steps.sonarqube_scan_status.outputs.stdout }}"
