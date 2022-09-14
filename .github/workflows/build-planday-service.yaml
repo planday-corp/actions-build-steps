@@ -115,13 +115,13 @@ jobs:
         run: |
           key=$(curl -s -q \
             -u ${{secrets.sonarqube_token}}: \
-            "http://${{inputs.sonarqube_url}}/api/project_analyses/search?project=${{inputs.image_name}}" \
+            "${{inputs.sonarqube_url}}/api/project_analyses/search?project=${{inputs.image_name}}" \
             | jq -r '.analyses[] | select(.projectVersion=="${{inputs.version}}") | .key')
           echo $key
 
           status=$(curl -s -q \
             -u ${{secrets.sonarqube_token}}: \
-            "http://${{inputs.sonarqube_url}}/api/qualitygates/project_status?analysisId=$key" | jq -r '.projectStatus.status')
+            "${{inputs.sonarqube_url}}/api/qualitygates/project_status?analysisId=$key" | jq -r '.projectStatus.status')
           echo $status
           echo "##[set-output name=sonar-status;]$(echo $status)"
 
