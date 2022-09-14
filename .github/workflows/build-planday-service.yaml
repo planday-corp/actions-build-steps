@@ -117,13 +117,37 @@ jobs:
             -u ${{secrets.sonarqube_token}}: \
             "${{inputs.sonarqube_url}}/api/project_analyses/search?project=${{inputs.image_name}}" \
             | jq -r '.analyses[] | select(.projectVersion=="${{inputs.version}}") | .key')
-          echo $key
 
           status=$(curl -s -q \
             -u ${{secrets.sonarqube_token}}: \
             "${{inputs.sonarqube_url}}/api/qualitygates/project_status?analysisId=$key" | jq -r '.projectStatus.status')
-          echo $status
-          echo "##[set-output name=sonar-status;]$(echo $status)"
+          
+          echo "$status"
+      
+      - name: Update the Pull Request with the SonarQube scan result
+        uses: actions/github-script@6
+        if: github.event_name == 'pull_request'
+        env:
+          status: "${{ steps.sonarqube_scan_status.outputs.stdout }}"
+        with:
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          script: |
+            const output = `#### SonarQube scan output 🖌\`${{ env.status }}\`
+
+            <details><summary>Details</summary>
+
+            [Project](${{inputs.sonarqube_url}}/dashboard?id=${{inputs.image_name}})
+
+            </details>
+
+            *Pushed by: @${{ github.actor }}, Action: \`${{ github.event_name }}\`*`;
+
+            github.rest.issues.createComment({
+              issue_number: context.issue.number,
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              body: output
+            })
 
   create-release: 
     if: ${{ always() && contains(join(needs.*.result, ','), 'success') }}
