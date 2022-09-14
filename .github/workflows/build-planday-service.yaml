@@ -102,7 +102,7 @@ jobs:
           push: true
           tags: ${{ inputs.registry }}/${{inputs.image_name}}:${{inputs.version}}
           file: Dockerfile
-          build-args: -|
+          build-args: |
             SONARQUBE_URL=${{inputs.sonarqube_url}}
             SONARQUBE_PROJECT_NAME=${{inputs.image_name}}
             SONARQUBE_TOKEN=${{secrets.sonarqube_token}}
