@@ -155,7 +155,7 @@ jobs:
         import os
        
         # strip the 'refs/heads/' from the branch name
-        branch_name = os.environ(GITHUB_REF).replace("refs/heads/", "")
+        branch_name = os.environ["GITHUB_REF"].replace("refs/heads/", "")
 
         # keep letters and numbers
         pattern = "[^0-9a-zA-Z\s]+"
@@ -190,7 +190,7 @@ jobs:
         import os
        
         # strip the 'refs/heads/' from the branch name
-        branch_name = os.environ(GITHUB_REF).replace("refs/heads/", "")
+        branch_name = os.environ["GITHUB_REF"].replace("refs/heads/", "")
 
         # keep letters and numbers
         pattern = "[^0-9a-zA-Z\s]+"
