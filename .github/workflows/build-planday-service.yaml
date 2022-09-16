@@ -69,12 +69,6 @@ jobs:
   build-and-push:
     runs-on: self-hosted
     steps:
-
-      - name: Extract branch name
-        shell: bash
-        run: echo "##[set-output name=branch;]$(echo ${GITHUB_REF#refs/heads/})"
-        id: extract_branch
-
       - uses: actions/checkout@v3 
 
       - name: Set up Docker
@@ -149,29 +143,55 @@ jobs:
               body: output
             })
 
-  create-release: 
-    if: ${{ always() && contains(join(needs.*.result, ','), 'success') }}
-    needs: [build-and-push]
+  create-octopus-environment:
     runs-on: self-hosted
-    steps:     
+    name: Create an environment in Octopus Deploy
+    
+    steps:
+    - name: Set environment name from branch name
+      shell: bash
+      run: echo "##[set-output name=env;]$(echo test-${GITHUB_REF#refs/heads/})"
+      id: set_environment_name
 
-      - name: Install Octopus CLI 🐙
-        uses: OctopusDeploy/install-octopus-cli-action@v1.1.10
-
-      - name: Create release 🐙
-        uses: OctopusDeploy/create-release-action@v1.1.1
-        with:
-          deploy_to: ${{ github.event.inputs.environment }}
-          api_key: ${{ secrets.octopus_api_key }}
-          server: ${{ inputs.octopus_server_url }}
-          space: 'Default'
-          project: ${{ inputs.octopus_project_name }}
-          release_number: ${{inputs.version}}
-          packages: | 
-            ${{inputs.image_name}}:${{inputs.version}}
-            helm:${{inputs.helm_version}}
-            planday-service-istio:${{inputs.helm_chart}}
-            certificate-and-gateway:${{inputs.gateway}}
+    - uses: planday-corp/create-octopus-environment@main
+      with: 
+          environment_name: "${{steps.set_environment_name.output.env}}"
+          delete: false
+          environment_to_copy: "stable"
+          octopus_server_url: "${{inputs.octopus_server_url}}"
+          octopus_api_key: ${{secrets.octopus_api_key}}
+      
+  create-deploy-release:
+    name: Create a release in Octopus and deploy it to a dynamic environment
+    runs-on: self-hosted
+    if: ${{ always() && contains(join(needs.*.result, ','), 'success') && ! contains('
+        refs/heads/main
+        refs/heads/master', github.ref) }}
+    needs: [build-and-push]
+    steps:
+    - name: Set environment name from branch name
+      shell: bash
+      run: echo "##[set-output name=env;]$(echo test-${GITHUB_REF#refs/heads/})"
+      id: set_environment_name
+    
+    - name: Install Octopus CLI 🐙
+      uses: OctopusDeploy/install-octopus-cli-action@v1.1.10
+    
+    - name: Deploy release 🐙
+      uses: OctopusDeploy/create-release-action@v1.1.1
+      with:
+        deploy_to: "${{steps.set_environment_name.output.env}}"
+        api_key: ${{ secrets.octopus_api_key }}
+        server: ${{ inputs.octopus_server_url }}
+        space: 'Default'
+        project: ${{ inputs.octopus_project_name }}
+        release_number: ${{inputs.version}}
+        progress: true
+        packages: |
+          ${{inputs.image_name}}:${{inputs.version}}
+          helm:${{inputs.helm_version}}
+          planday-service-istio:${{inputs.helm_chart}}
+          certificate-and-gateway:${{inputs.gateway}}
       
 #  deploy-production:
 #    if: github.event.review.state == 'approved'
