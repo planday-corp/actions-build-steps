@@ -149,31 +149,16 @@ jobs:
     
     steps:
     - name: Set environment name from branch name
-      shell: python3 {0}
-      run: |
-        import re
-        import os
-       
-        # strip the 'refs/heads/' from the branch name
-        branch_name = os.environ["GITHUB_REF"].replace("refs/heads/", "")
-
-        # keep letters and numbers
-        pattern = "[^0-9a-zA-Z\s]+"
-
-        # perform a regex substitution to clean the branch name 
-        # from any charachers except letters and numbers
-        sanitized_branch_name = re.sub(pattern, "", branch_name)
-
-        print("##[set-output name=env;]test-"+sanitized_branch_name)
+      uses: planday-corp/actions-environment-name-sanitation@v1
       id: set_environment_name
 
     - uses: planday-corp/create-octopus-environment@main
       with: 
-          environment_name: "${{steps.set_environment_name.outputs.env}}"
-          delete: false
-          environment_to_copy: "stable"
-          octopus_server_url: "${{inputs.octopus_server_url}}"
-          octopus_api_key: ${{secrets.octopus_api_key}}
+        environment_name: "${{steps.set_environment_name.outputs.environment_name}}"
+        delete: false
+        environment_to_copy: "stable"
+        octopus_server_url: "${{inputs.octopus_server_url}}"
+        octopus_api_key: ${{secrets.octopus_api_key}}
       
   create-deploy-release:
     name: Create a release in Octopus and deploy it to a dynamic environment
@@ -184,22 +169,7 @@ jobs:
     needs: [build-and-push]
     steps:
     - name: Set environment name from branch name
-      shell: python3 {0}
-      run: |
-        import re
-        import os
-       
-        # strip the 'refs/heads/' from the branch name
-        branch_name = os.environ["GITHUB_REF"].replace("refs/heads/", "")
-
-        # keep letters and numbers
-        pattern = "[^0-9a-zA-Z\s]+"
-
-        # perform a regex substitution to clean the branch name 
-        # from any charachers except letters and numbers
-        sanitized_branch_name = re.sub(pattern, "", branch_name)
-
-        print("##[set-output name=env;]test-"+sanitized_branch_name)
+      uses: planday-corp/actions-environment-name-sanitation@v1
       id: set_environment_name
     
     - name: Install Octopus CLI 🐙
@@ -208,7 +178,7 @@ jobs:
     - name: Deploy release 🐙
       uses: OctopusDeploy/create-release-action@v1.1.1
       with:
-        deploy_to: "${{steps.set_environment_name.outputs.env}}"
+        deploy_to: "${{steps.set_environment_name.outputs.environment_name}}"
         api_key: ${{ secrets.octopus_api_key }}
         server: ${{ inputs.octopus_server_url }}
         space: 'Default'
