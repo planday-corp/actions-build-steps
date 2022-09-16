@@ -155,7 +155,7 @@ jobs:
 
     - uses: planday-corp/create-octopus-environment@main
       with: 
-          environment_name: "${{steps.set_environment_name.output.env}}"
+          environment_name: "${{steps.set_environment_name.outputs.env}}"
           delete: false
           environment_to_copy: "stable"
           octopus_server_url: "${{inputs.octopus_server_url}}"
@@ -180,7 +180,7 @@ jobs:
     - name: Deploy release 🐙
       uses: OctopusDeploy/create-release-action@v1.1.1
       with:
-        deploy_to: "${{steps.set_environment_name.output.env}}"
+        deploy_to: "${{steps.set_environment_name.outputs.env}}"
         api_key: ${{ secrets.octopus_api_key }}
         server: ${{ inputs.octopus_server_url }}
         space: 'Default'
