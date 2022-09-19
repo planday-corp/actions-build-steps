@@ -73,6 +73,7 @@ on:
 
 jobs:
   build-and-push:
+    name: Build and push Docker image to ACR
     runs-on: self-hosted
     steps:
       - uses: actions/checkout@v3 
@@ -150,9 +151,8 @@ jobs:
             })
 
   create-octopus-environment:
-    runs-on: self-hosted
     name: Create an environment in Octopus Deploy
-    
+    runs-on: self-hosted
     steps:
     - name: Set environment name from branch name
       uses: planday-corp/actions-environment-name-sanitation@v1
@@ -172,7 +172,7 @@ jobs:
     if: ${{ always() && contains(join(needs.*.result, ','), 'success') && ! contains('
         refs/heads/main
         refs/heads/master', github.ref) }}
-    needs: [build-and-push]
+    needs: [build-and-push, create-octopus-environment]
     steps:
     - name: Set environment name from branch name
       uses: planday-corp/actions-environment-name-sanitation@v1
