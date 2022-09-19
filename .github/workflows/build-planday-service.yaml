@@ -152,7 +152,7 @@ jobs:
       uses: planday-corp/actions-environment-name-sanitation@v1
       id: set_environment_name
 
-    - uses: planday-corp/actions-octopus-environment-config@main
+    - uses: planday-corp/actions-octopus-environment-config@v1
       with: 
         environment_name: "${{steps.set_environment_name.outputs.environment_name}}"
         delete: false
