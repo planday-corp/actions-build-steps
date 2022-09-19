@@ -10,9 +10,9 @@ on:
   workflow_call:
     inputs:
       image_name:
-        description: "name of the docker image that will be built"
-        required: true
         type: string
+        description: "Name of the Docker image to build. (ex: 'myapp')"
+        required: true
       registry: 
         type: string
         description: "Azure Containers Registry to push the image to"
@@ -23,48 +23,54 @@ on:
         required: true
       version:
         type: string
+        description: "Version of the Docker image to build. (ex: '1.2.3' or 'v1.2.4)"
         required: true
       helm_version:
-        type: string 
+        type: string
+        description: "Helm version"
         default: "3.4.0"
         required: false
       helm_chart:
         type: string
+        description: "Helm chart version used to deploy the Docker image"
         default: '1.0.212'
         required: false
       gateway:
         type: string
+        description: "Gateway version"
         default: '1.0.212'
         required: false
       octopus_server_url:
         type: string
+        description: "URL of the Octopus server"
         required: true
       octopus_project_name:
         type: string
-        description: "octopus project name"
+        description: "Name of the project in Octopus"
         required: true
       dockerargs:
         type: string
         description: "Additional build arguments for docker, provided as a multiline string"
         required: false
-      sonarqube_url:
+      sonarqube_server_url:
         type: string
-        description: "sonarqube url"
+        description: "URL of the SonarQube server"
         required: true
 
     secrets:
       acr_username: 
-        description: "service principal ID for azure ACR "
+        description: "Service Principal ID for Azure ACR"
         required: true
       acr_password: 
-        description: "password for service principal for azure ACR"
+        description: "Service Principal password for Azure ACR"
         required: true
       octopus_api_key:
-        description: "api-key for octopus deploy"
+        description: "API key of the Octopus server"
         required: true      
       sonarqube_token:
+        description: "SonarQube server token"
         required: true
-        description: "token for sonarqube"
+
 jobs:
   build-and-push:
     runs-on: self-hosted
@@ -97,7 +103,7 @@ jobs:
           tags: ${{ inputs.registry }}/${{inputs.image_name}}:${{inputs.version}}
           file: Dockerfile
           build-args: |
-            SONARQUBE_URL=${{inputs.sonarqube_url}}
+            SONARQUBE_URL=${{inputs.sonarqube_server_url}}
             SONARQUBE_PROJECT_NAME=${{inputs.image_name}}
             SONARQUBE_TOKEN=${{secrets.sonarqube_token}}
             SONARQUBE_VERSION=${{inputs.version}}
@@ -109,12 +115,12 @@ jobs:
         run: |
           key=$(curl -s -q \
             -u ${{secrets.sonarqube_token}}: \
-            "${{inputs.sonarqube_url}}/api/project_analyses/search?project=${{inputs.image_name}}" \
+            "${{inputs.sonarqube_server_url}}/api/project_analyses/search?project=${{inputs.image_name}}" \
             | jq -r '.analyses[] | select(.projectVersion=="${{inputs.version}}") | .key')
 
           status=$(curl -s -q \
             -u ${{secrets.sonarqube_token}}: \
-            "${{inputs.sonarqube_url}}/api/qualitygates/project_status?analysisId=$key" | jq -r '.projectStatus.status')
+            "${{inputs.sonarqube_server_url}}/api/qualitygates/project_status?analysisId=$key" | jq -r '.projectStatus.status')
           
           echo "$status"
       
@@ -130,7 +136,7 @@ jobs:
 
             <details><summary>Details</summary>
 
-            [Project](${{inputs.sonarqube_url}}/dashboard?id=${{inputs.image_name}})
+            [Project](${{inputs.sonarqube_server_url}}/dashboard?id=${{inputs.image_name}})
 
             </details>
 
@@ -155,7 +161,7 @@ jobs:
     - uses: planday-corp/actions-octopus-environment-config@v1
       with: 
         environment_name: "${{steps.set_environment_name.outputs.environment_name}}"
-        delete: false
+        delete_environment: false
         environment_to_copy: "stable"
         octopus_server_url: "${{inputs.octopus_server_url}}"
         octopus_api_key: ${{secrets.octopus_api_key}}
