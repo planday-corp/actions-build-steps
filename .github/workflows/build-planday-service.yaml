@@ -30,11 +30,11 @@ on:
         required: false
       helm_chart:
         type: string
-        default: '1.0.210'
+        default: '1.0.212'
         required: false
       gateway:
         type: string
-        default: '1.0.210'
+        default: '1.0.212'
         required: false
       octopus_server_url:
         type: string
