@@ -1,0 +1,59 @@
+name: "Delete Planday's dynamic environment: The Octopus release and its associated resources in Kubernetes"
+
+on:
+  pull_request:
+    types:
+      - "closed"
+  workflow_call:
+    inputs:
+      octopus_server_url:
+        type: string
+        description: "URL of the Octopus server"
+        required: true
+      aks_resource_group:
+        type: string
+        description: "Name of the AKS resource group"
+        required: true
+      aks_cluster_name:
+        type: string
+        description: "Name of the AKS cluster"
+        required: true
+    secrets:
+      octopus_api_key:
+        description: "API key of the Octopus server"
+        required: true
+      kubernetes_azure_credentials:
+        description: 'Credentials of the Azure SP in json format: `{"clientId":"xxxxxxx","clientSecret":"XXXXXXXX","subscriptionId":"xxxxxx","tenantId":"xxxxx"}`'
+        required: true
+
+jobs:
+  delete-octopus-environment:
+    name: Delete a dynamic environment in Octopus
+    if: github.event.pull_request.merged == true
+    runs-on: self-hosted
+    steps:
+    - name: Get environment name from branch name
+      uses: planday-corp/actions-environment-name-sanitation@v1
+      id: get_environment_name
+    - uses: planday-corp/actions-octopus-environment-config@v2
+      with:
+        environment_name: "${{steps.get_environment_name.outputs.environment_name}}"
+        delete_environment: true
+        environment_to_copy: "stable"
+        octopus_server_url: ${{ inputs.octopus_server_url }}
+        octopus_api_key: ${{ secrets.octopus_api_key }}
+  
+  delete-kubernetes-resources:
+    name: Delete associated resources in Kubernetes
+    if: github.event.pull_request.merged == true
+    runs-on: self-hosted
+    needs: ["delete-octopus-environment"]
+    steps:
+    - uses: azure/login@v1
+      with:
+        creds: ${{ secrets.kubernetes_azure_credentials }}
+    
+    - uses: azure/aks-set-context@v3
+      with:
+        resource-group: ${{inputs.aks_resource_group}}
+        cluster-name: ${{inputs.aks_cluster_name}}
