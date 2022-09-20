@@ -1,4 +1,4 @@
-name: Build standard planday dockerfile
+name: Build and push standard Planday Docker image and deploy in Kubernetes with Octopus Deploy
 
 on:
   pull_request_review:
@@ -158,7 +158,7 @@ jobs:
       uses: planday-corp/actions-environment-name-sanitation@v1
       id: set_environment_name
 
-    - uses: planday-corp/actions-octopus-environment-config@v1
+    - uses: planday-corp/actions-octopus-environment-config@v2
       with: 
         environment_name: "${{steps.set_environment_name.outputs.environment_name}}"
         delete_environment: false
@@ -191,9 +191,9 @@ jobs:
         project: ${{ inputs.octopus_project_name }}
         release_number: ${{inputs.version}}
         progress: true
+        ignore_existing: true
         packages: |
           ${{inputs.image_name}}:${{inputs.version}}
           helm:${{inputs.helm_version}}
           planday-service-istio:${{inputs.helm_chart}}
           certificate-and-gateway:${{inputs.gateway}}
-      
