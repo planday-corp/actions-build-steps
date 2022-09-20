@@ -57,6 +57,10 @@ jobs:
     runs-on: self-hosted
     needs: ["delete-octopus-environment"]
     steps:
+    - name: Install azure cli
+      run: |
+        which az
+
     - uses: azure/login@v1
       with:
         creds: ${{ secrets.kubernetes_azure_credentials }}

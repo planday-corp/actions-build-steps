@@ -169,9 +169,9 @@ jobs:
   create-deploy-release:
     name: Create a release in Octopus and deploy it to a dynamic environment
     runs-on: self-hosted
-    if: ${{ always() && contains(join(needs.*.result, ','), 'success') && ! contains('
-        refs/heads/main
-        refs/heads/master', github.ref) }}
+    # When previous jobs succeded and the branch isn't "main" or "master"
+    if: ${{ contains(join(needs.*.result, ','), 'success') && 
+      ! contains(fromJson('["refs/heads/main","refs/heads/master"]'), github.ref) }}
     needs: [build-and-push, create-octopus-environment]
     steps:
     - name: Set environment name from branch name
