@@ -113,6 +113,7 @@ jobs:
       - name: Retrieve Sonarqube scan status
         shell: bash
         id: sonarqube_scan_status
+        if: github.event_name == 'pull_request'
         run: |
           key=$(curl -s -q \
             -u ${{secrets.sonarqube_token}}: \
@@ -183,6 +184,7 @@ jobs:
     
     - name: Deploy release 🐙
       uses: OctopusDeploy/create-release-action@v1.1.1
+      id: octopus_release
       with:
         deploy_to: "${{steps.set_environment_name.outputs.environment_name}}"
         api_key: ${{ secrets.octopus_api_key }}
@@ -197,3 +199,85 @@ jobs:
           helm:${{inputs.helm_version}}
           planday-service-istio:${{inputs.helm_chart}}
           certificate-and-gateway:${{inputs.gateway}}
+
+    - name: Retrieve Octopus release
+      id: get_octopus_release
+      run: |
+        # https://docs.github.com/en/actions/using-workflows/workflow-commands-for-github-actions#echoing-command-outputs
+        echo '::set-output name=action_echo::enabled'
+
+        # Read project id and slug
+        read -r project_id project_slug <  <(curl -s -q \
+          -H "X-Octopus-ApiKey: ${{secrets.octopus_api_key}}" \
+          -H "Accept: application/json" \
+          "${{inputs.octopus_server_url}}/api/projects/all" \
+          | jq -r -M '.[] | select(.Name == "${{inputs.octopus_project_name}}") | [.Id,.Slug] | @tsv')
+
+        curl -s -q \
+          -H "X-Octopus-ApiKey: ${{secrets.octopus_api_key}}" \
+          -H "Accept: application/json" \
+          "${{inputs.octopus_server_url}}/api/projects/$project_id/releases/${{inputs.version}}" \
+          | jq -r -M '' > release.json
+
+        # Read space id
+        space_id="$(jq -r -M '.SpaceId' release.json)"
+
+        # Read release packages
+        release_packages="$(jq -c -r -M '.SelectedPackages' release.json)"
+
+        # Reconstruct the release URL
+        release_url="${{inputs.octopus_server_url}}/app#/$space_id/projects/$project_slug/deployments/releases/${{inputs.version}}"
+
+        echo "release_url=$release_url" >> $GITHUB_ENV
+        echo "release_packages='$release_packages'" >> $GITHUB_ENV
+
+        echo "::set-output name=release_pkg::$release_packages"
+
+        echo "cat GITHUB_ENV ---"
+        cat $GITHUB_ENV
+
+    - name: Debug release output
+      run: |
+        echo "release_url = ${{env.release_url}}"
+        echo "release_packages = ${{env.release_packages}}"
+        echo "release_packages_tojson = ${{ toJSON(env.release_packages) }}"
+        echo "release_packages_fromjson = ${{ fromJSON(env.release_packages) }}"
+        echo "release_pkg = ${{steps.get_octopus_release.outputs.release_pkg}}"
+        echo "---------------"
+        echo ""
+
+    - name: Debug
+      uses: actions/github-script@v6
+      with:
+        github-token: ${{ secrets.GITHUB_TOKEN }}
+        script: |
+          var release_packages = process.env.release_packages
+          var release_packages_tojson = ${{ fromJSON(env.release_packages) }}"
+          
+          console.log("release_packages = ", release_packages)
+          console.log("release_packages_tojson = ", release_packages_tojson)
+
+    # - name: Update the Pull Request with the SonarQube scan result
+    #   uses: actions/github-script@v6
+    #   if: github.event_name == 'pull_request'
+    #   ## TODO: must run even if release failed to be deployed
+    #   with:
+    #     github-token: ${{ secrets.GITHUB_TOKEN }}
+    #     script: |
+    #       const output = `# 🚀 Octopus Deploy release v${{ inputs.version }} 🚀
+
+    #       <details><summary>Details</summary>
+
+    #       [Release](${{env.release_url}})
+
+
+    #       </details>
+
+    #       *Pushed by: @${{ github.actor }}, Action: \`${{ github.event_name }}\`*`;
+
+    #       github.rest.issues.createComment({
+    #         issue_number: context.issue.number,
+    #         owner: context.repo.owner,
+    #         repo: context.repo.repo,
+    #         body: output
+    #       })

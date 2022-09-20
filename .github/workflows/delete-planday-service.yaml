@@ -57,6 +57,7 @@ jobs:
     runs-on: self-hosted
     needs: ["delete-octopus-environment"]
     steps:
+    # ref: https://learn.microsoft.com/en-us/cli/azure/install-azure-cli-linux?pivots=apt#option-1-install-with-one-command
     - name: Install azure cli
       run: |
         which az || { curl -sL https://aka.ms/InstallAzureCLIDeb | sudo bash ; }
