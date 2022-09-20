@@ -59,7 +59,7 @@ jobs:
     steps:
     - name: Install azure cli
       run: |
-        which az
+        which az || { curl -sL https://aka.ms/InstallAzureCLIDeb | sudo bash ; }
 
     - uses: azure/login@v1
       with:
