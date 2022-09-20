@@ -32,6 +32,14 @@ jobs:
     if: github.event.pull_request.merged == true
     runs-on: self-hosted
     steps:
+    - name: debug
+      env:
+        GITHUB_CONTEXT: ${{ toJson(github) }}
+      run: |
+        env
+        echo -e "\n--------------------------------\n"
+        echo "$GITHUB_CONTEXT"
+
     - name: Get environment name from branch name
       uses: planday-corp/actions-environment-name-sanitation@v1
       id: get_environment_name
