@@ -202,6 +202,7 @@ jobs:
 
     - name: Retrieve Octopus release
       id: get_octopus_release
+      if: always() && github.event_name == 'pull_request'
       run: |
         # https://docs.github.com/en/actions/using-workflows/workflow-commands-for-github-actions#echoing-command-outputs
         echo '::set-output name=action_echo::enabled'
@@ -229,46 +230,53 @@ jobs:
         release_url="${{inputs.octopus_server_url}}/app#/$space_id/projects/$project_slug/deployments/releases/${{inputs.version}}"
 
         echo "release_url=$release_url" >> $GITHUB_ENV
-        echo "release_packages='$release_packages'" >> $GITHUB_ENV
+        echo "release_packages=$release_packages" >> $GITHUB_ENV
 
-    - name: Debug release output
-      run: |
-        echo "release_url = ${{env.release_url}}"
-        echo "release_packages = ${{env.release_packages}}"
-        echo "release_packages_tojson = ${{ toJSON(env.release_packages) }}"
-        echo "release_packages_fromjson = ${{ fromJSON(env.release_packages) }}"
-
-    - name: Debug
+    - name: Update the Pull Request with the Octopus release results
       uses: actions/github-script@v6
+      if: always() && github.event_name == 'pull_request'
       with:
+        github-token: ${{ secrets.GITHUB_TOKEN }}
         script: |
-          var release_packages = process.env.release_packages
-          var release_packages_tojson = ${{ fromJSON(env.release_packages) }}"
+          const release_packages = JSON.parse(process.env.release_packages)
+
+          // Build the following markdown table (example):
+          //
+          //
+          // | Name | Version | Package Reference Name |
+          // | :---: | :---: | :---: |
+          // | Deploy Planday service to k8s | `3.4.0` | `helm` |
+          // | Deploy Planday service to k8s | `1.0.212` | `helm-chart-istio` |
+          // | Deploy Planday service to k8s | `1.0.212` | `certificate-and-gateway` |
+          // | Deploy Planday service to k8s | `2.1.160` | `dockerPackage` |
+          //
+          //
+          let md_table = `| Name | Version | Package Reference Name |
+          | :---: | :---: | :---: |
+          `
+          for (var i = 0; i < release_packages.length; i++) {
+            var pkg = release_packages[i];
+            md_table += '| ' + pkg.ActionName + ' | `' + pkg.Version + '` | `' + pkg.PackageReferenceName + '` |\n';
+          }
+
+          let output = `# 🚀 Octopus Deploy - release v${{ inputs.version }} 🚀
+
+          <details><summary>Details</summary>
           
-          console.log("release_packages = ", release_packages)
-          console.log("release_packages_tojson = ", release_packages_tojson)
+          [Release URL](${{ env.release_url }})
 
-    # - name: Update the Pull Request with the SonarQube scan result
-    #   uses: actions/github-script@v6
-    #   if: github.event_name == 'pull_request'
-    #   ## TODO: must run even if release failed to be deployed
-    #   with:
-    #     github-token: ${{ secrets.GITHUB_TOKEN }}
-    #     script: |
-    #       const output = `# 🚀 Octopus Deploy release v${{ inputs.version }} 🚀
+          `
 
-    #       <details><summary>Details</summary>
-
-    #       [Release](${{env.release_url}})
+          output += '\n\n\n' + md_table
+          output += `
+          </details>
 
 
-    #       </details>
+          *Pushed by: @${{ github.actor }}, Action: \`${{ github.event_name }}\`*`;
 
-    #       *Pushed by: @${{ github.actor }}, Action: \`${{ github.event_name }}\`*`;
-
-    #       github.rest.issues.createComment({
-    #         issue_number: context.issue.number,
-    #         owner: context.repo.owner,
-    #         repo: context.repo.repo,
-    #         body: output
-    #       })
+          github.rest.issues.createComment({
+            issue_number: context.issue.number,
+            owner: context.repo.owner,
+            repo: context.repo.repo,
+            body: output
+          })
