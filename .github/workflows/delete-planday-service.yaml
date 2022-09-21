@@ -57,10 +57,17 @@ jobs:
     runs-on: self-hosted
     needs: ["delete-octopus-environment"]
     steps:
+    - name: Get environment name from branch name
+      uses: planday-corp/actions-environment-name-sanitation@v1
+      id: get_environment_name
     # ref: https://learn.microsoft.com/en-us/cli/azure/install-azure-cli-linux?pivots=apt#option-1-install-with-one-command
     - name: Install azure cli
       run: |
         which az || { curl -sL https://aka.ms/InstallAzureCLIDeb | sudo bash ; }
+    
+    - uses: Azure/setup-kubectl@v3
+      with:
+        version: 'v1.22.11'
 
     - uses: azure/login@v1
       with:
@@ -70,3 +77,9 @@ jobs:
       with:
         resource-group: ${{inputs.aks_resource_group}}
         cluster-name: ${{inputs.aks_cluster_name}}
+        admin: 'true'
+    
+    - name: Delete Kubernetes namespace
+      run: kubectl delete namespace "${{steps.get_environment_name.outputs.environment_name}}"
+
+    

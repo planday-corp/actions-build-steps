@@ -231,25 +231,16 @@ jobs:
         echo "release_url=$release_url" >> $GITHUB_ENV
         echo "release_packages='$release_packages'" >> $GITHUB_ENV
 
-        echo "::set-output name=release_pkg::$release_packages"
-
-        echo "cat GITHUB_ENV ---"
-        cat $GITHUB_ENV
-
     - name: Debug release output
       run: |
         echo "release_url = ${{env.release_url}}"
         echo "release_packages = ${{env.release_packages}}"
         echo "release_packages_tojson = ${{ toJSON(env.release_packages) }}"
         echo "release_packages_fromjson = ${{ fromJSON(env.release_packages) }}"
-        echo "release_pkg = ${{steps.get_octopus_release.outputs.release_pkg}}"
-        echo "---------------"
-        echo ""
 
     - name: Debug
       uses: actions/github-script@v6
       with:
-        github-token: ${{ secrets.GITHUB_TOKEN }}
         script: |
           var release_packages = process.env.release_packages
           var release_packages_tojson = ${{ fromJSON(env.release_packages) }}"
