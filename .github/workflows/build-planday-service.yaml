@@ -75,6 +75,10 @@ jobs:
   build-and-push:
     name: Build and push Docker image to ACR
     runs-on: self-hosted
+    outputs:
+      sonarqube_scan_status: ${{ steps.sonarqube_scan_status.outputs.sonarqube_scan_status }}
+      sonarqube_server_url: ${{ steps.sonarqube_scan_status.outputs.sonarqube_server_url}}
+      image_name: ${{ steps.sonarqube_scan_status.outputs.image_name}}
     steps:
       - uses: actions/checkout@v3 
 
@@ -118,39 +122,17 @@ jobs:
           key=$(curl -s -q \
             -u ${{secrets.sonarqube_token}}: \
             "${{inputs.sonarqube_server_url}}/api/project_analyses/search?project=${{inputs.image_name}}" \
-            | jq -r '.analyses[] | select(.projectVersion=="${{inputs.version}}") | .key')
+            | jq -r '.analyses[] | select(.projectVersion=="${{inputs.version}}")' \
+            | jq -r -s 'sort_by(.date) | last | .key')
 
           status=$(curl -s -q \
             -u ${{secrets.sonarqube_token}}: \
             "${{inputs.sonarqube_server_url}}/api/qualitygates/project_status?analysisId=$key" | jq -r '.projectStatus.status')
           
-          echo "$status"
+          echo "::set-output name=sonarqube_scan_status::$status"
+          echo "::set-output name=sonarqube_server_url::${{inputs.sonarqube_server_url}}"
+          echo "::set-output name=image_name::${{inputs.image_name}}"
       
-      - name: Update the Pull Request with the SonarQube scan result
-        uses: actions/github-script@v6
-        if: github.event_name == 'pull_request'
-        env:
-          status: "${{ steps.sonarqube_scan_status.outputs.stdout }}"
-        with:
-          github-token: ${{ secrets.GITHUB_TOKEN }}
-          script: |
-            const output = `#### SonarQube scan output 🖌\`${{ env.status }}\`
-
-            <details><summary>Details</summary>
-
-            [Project](${{inputs.sonarqube_server_url}}/dashboard?id=${{inputs.image_name}})
-
-            </details>
-
-            *Pushed by: @${{ github.actor }}, Action: \`${{ github.event_name }}\`*`;
-
-            github.rest.issues.createComment({
-              issue_number: context.issue.number,
-              owner: context.repo.owner,
-              repo: context.repo.repo,
-              body: output
-            })
-
   create-octopus-environment:
     name: Create an environment in Octopus Deploy
     runs-on: self-hosted
@@ -200,6 +182,14 @@ jobs:
           planday-service-istio:${{inputs.helm_chart}}
           certificate-and-gateway:${{inputs.gateway}}
 
+    - name: Retrieve SonarQube scan status
+      id: sonarqube_scan_status
+      if: always() && github.event_name == 'pull_request'
+      run: |
+        echo "sonarqube_scan_status=${{needs.build-and-push.outputs.sonarqube_scan_status}}" >> $GITHUB_ENV
+        echo "sonarqube_server_url=${{needs.build-and-push.outputs.sonarqube_server_url}}" >> $GITHUB_ENV
+        echo "image_name=${{needs.build-and-push.outputs.image_name}}" >> $GITHUB_ENV
+
     - name: Retrieve Octopus release
       id: get_octopus_release
       if: always() && github.event_name == 'pull_request'
@@ -232,7 +222,7 @@ jobs:
         echo "release_url=$release_url" >> $GITHUB_ENV
         echo "release_packages=$release_packages" >> $GITHUB_ENV
 
-    - name: Update the Pull Request with the Octopus release results
+    - name: Update the Pull Request with the Octopus release results and SonarQube scan status
       uses: actions/github-script@v6
       if: always() && github.event_name == 'pull_request'
       with:
@@ -259,7 +249,7 @@ jobs:
             md_table += '| ' + pkg.ActionName + ' | `' + pkg.Version + '` | `' + pkg.PackageReferenceName + '` |\n';
           }
 
-          let output = `# 🚀 Octopus Deploy - release v${{ inputs.version }} 🚀
+          let output_octopus = `# 🚀 Octopus Deploy - release v${{ inputs.version }} 🚀
 
           <details><summary>Details</summary>
           
@@ -267,12 +257,31 @@ jobs:
 
           `
 
-          output += '\n\n\n' + md_table
-          output += `
+          output_octopus += '\n\n\n' + md_table
+          output_octopus += `
           </details>
 
+          `;
 
-          *Pushed by: @${{ github.actor }}, Action: \`${{ github.event_name }}\`*`;
+          let sonarqube_project_url = process.env.sonarqube_server_url + '/dashboard?id=' + process.env.image_name
+          let sonarqube_scan_status = process.env.sonarqube_scan_status
+          let sonarqube_scan_status_symbol = sonarqube_scan_status == "OK" ? "✅" : "💥"
+          let output_sonarqube = `# 🧊 SonarQube scan status 🧊
+          
+          <details><summary>Details</summary>
+
+          
+          **Status: ` + sonarqube_scan_status + `** ` + sonarqube_scan_status_symbol + `
+          [Project URL](` + sonarqube_project_url + `)
+
+          </details>
+          `
+
+          let output = output_octopus + `
+          
+          ` + output_sonarqube + `
+
+          *Pushed by: @${{ github.actor }}, Action: \`${{ github.event_name }}\`*`
 
           github.rest.issues.createComment({
             issue_number: context.issue.number,
