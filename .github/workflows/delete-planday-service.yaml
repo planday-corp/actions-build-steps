@@ -4,6 +4,15 @@ on:
   pull_request:
     types:
       - "closed"
+  workflow_dispatch:
+    inputs:
+      delete:
+        type: choice
+        required: true
+        description: "Confirm the deletion of the dynamic environment"
+        options:
+        - 'true'
+        - 'false'
   workflow_call:
     inputs:
       octopus_server_url:
@@ -29,7 +38,7 @@ on:
 jobs:
   delete-octopus-environment:
     name: Delete a dynamic environment in Octopus
-    if: github.event.pull_request.merged == true
+    if: github.event.pull_request.merged == true || ${{ inputs.delete }} == 'true'
     runs-on: self-hosted
     steps:
     - name: Get environment name from branch name
@@ -45,7 +54,7 @@ jobs:
   
   delete-kubernetes-resources:
     name: Delete associated resources in Kubernetes
-    if: github.event.pull_request.merged == true
+    if: github.event.pull_request.merged == true || ${{ inputs.delete }} == 'true'
     runs-on: self-hosted
     needs: ["delete-octopus-environment"]
     steps:
