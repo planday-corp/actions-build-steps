@@ -35,7 +35,7 @@ on:
 jobs:
   delete-octopus-environment:
     name: Delete a dynamic environment in Octopus
-    if: github.event.pull_request.merged == true || ${{ inputs.delete }} == 'true'
+    if: github.event.ref_type == 'branch' || ${{ inputs.delete }} == 'true'
     runs-on: self-hosted
     steps:
     - name: Get environment name from branch name
@@ -51,7 +51,7 @@ jobs:
   
   delete-kubernetes-resources:
     name: Delete associated resources in Kubernetes
-    if: github.event.pull_request.merged == true || ${{ inputs.delete }} == 'true'
+    if: github.event.ref_type == 'branch' || ${{ inputs.delete }} == 'true'
     runs-on: self-hosted
     needs: ["delete-octopus-environment"]
     steps:
