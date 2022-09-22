@@ -78,4 +78,11 @@ jobs:
         admin: 'true'
     
     - name: Delete Kubernetes namespace
-      run: kubectl delete namespace "${{steps.get_environment_name.outputs.environment_name}}"
+      run: |
+        kubectl get namespace ${{steps.get_environment_name.outputs.environment_name}} || \
+        {
+          echo '::warning:: Namespace ${{steps.get_environment_name.outputs.environment_name}} does not exists';
+          exit 0;
+        }
+        
+        kubectl delete namespace "${{steps.get_environment_name.outputs.environment_name}}"
