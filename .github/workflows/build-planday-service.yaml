@@ -1,12 +1,6 @@
 name: Build and push standard Planday Docker image and deploy in Kubernetes with Octopus Deploy
 
 on:
-  pull_request_review:
-    types: [submitted,edited]
-  push:
-    branches-ignore:
-      - "main"
-      - "master"
   workflow_call:
     inputs:
       image_name:

@@ -1,9 +1,6 @@
 name: "Delete Planday's dynamic environment: The Octopus release and its associated resources in Kubernetes"
 
 on:
-  pull_request:
-    types:
-      - "closed"
   workflow_dispatch:
     inputs:
       delete:
