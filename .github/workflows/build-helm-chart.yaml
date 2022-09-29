@@ -53,7 +53,7 @@ jobs:
 
       - name: Log in to Azure cli
         run: | 
-          az login --service-principal -u ${{ inputs.azure_client_id }} -t ${{ inputs.azure_tenant_id }} -p ${{ secerts.azure_client_secret }}
+          az login --service-principal -u ${{ inputs.azure_client_id }} -t ${{ inputs.azure_tenant_id }} -p ${{ secrets.azure_client_secret }}
 
       - name: Add helm repo
         run: |
