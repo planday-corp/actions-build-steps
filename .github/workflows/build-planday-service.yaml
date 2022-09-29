@@ -65,6 +65,10 @@ on:
         description: "SonarQube server token"
         required: true
 
+    outputs:
+      release_number: 
+        description: "Octopus release number"
+        value: ${{jobs.create-deploy-release.outputs.release_number}}
 jobs:
   build-and-push:
     name: Build and push Docker image to ACR
@@ -146,6 +150,8 @@ jobs:
   create-deploy-release:
     name: Create a release in Octopus and deploy it to a dynamic environment
     runs-on: self-hosted
+    outputs:
+      release_number: ${{inputs.version}}
     # When previous jobs succeded and the branch isn't "main" or "master"
     if: ${{ contains(join(needs.*.result, ','), 'success') && 
       ! contains(fromJson('["refs/heads/main","refs/heads/master"]'), github.ref) }}
