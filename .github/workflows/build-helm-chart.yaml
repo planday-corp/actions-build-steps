@@ -15,12 +15,15 @@ on:
         type: string
         description: "Azure Containers Registry to push the package to"
         required: true
-    secrets: 
-      acr_username: 
-        description: "Service Principal ID for Azure ACR"
+      azure_tenant_id:
+        type: string
         required: true
-      acr_password: 
-        description: "Service Principal password for Azure ACR"
+      azure_client_id:
+        type: string
+        required: true
+    secrets: 
+      azure_client_secret:
+        type: string
         required: true
       
 
@@ -45,9 +48,17 @@ jobs:
       #   run: |
       #     helm registry login ${{ inputs.registry }} --username ${{ secrets.acr_username }} --password ${{ secrets.acr_password }} 
       
-      - name: Log in to Azure ACR
+      # - name: Log in to Azure ACR
+      #   run: |
+      #     az acr login --name ${{ inputs.acr_name }} --username ${{ secrets.acr_username }} --password ${{ secrets.acr_password }} 
+
+      - name: Log in to Azure cli
+        run: | 
+          az login --service-principal -u ${{ inputs.azure_client_id }} -t ${{ inputs.azure_tenant_id }} -p ${{ secerts.azure_client_secret }}
+
+      - name: Add helm repo
         run: |
-          az acr login --name ${{ inputs.acr_name }} --username ${{ secrets.acr_username }} --password ${{ secrets.acr_password }} 
+          az acr helm repo add --name ${{ inputs.acr_name }}
 
       - name: Save chart locally
         run: |
