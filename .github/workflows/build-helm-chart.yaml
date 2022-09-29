@@ -41,3 +41,11 @@ jobs:
         run: |
           helm registry login ${{ inputs.registry }} --username ${{ secrets.acr_username }} --password ${{ secrets.acr_password }} 
       
+      - name: Save chart locally
+        run: |
+          helm chart save ./ ${{ inputs.registry }}/${{ inputs.helm_name }}:${{ inputs.version }}
+        
+      - name: Push chart to ACR
+        run: |
+          helm chart push ${{ inputs.registry }}/${{ inputs.helm_name }}:${{ inputs.version }}
+      
