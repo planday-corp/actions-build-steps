@@ -15,6 +15,13 @@ on:
         type: string
         description: "Azure Containers Registry to push the package to"
         required: true
+    secrets: 
+      acr_username: 
+        description: "Service Principal ID for Azure ACR"
+        required: true
+      acr_password: 
+        description: "Service Principal password for Azure ACR"
+        required: true
       
 
 jobs:
