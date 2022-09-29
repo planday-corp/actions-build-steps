@@ -43,7 +43,7 @@ jobs:
 
       - name: Log in to Azure ACR
         run: |
-          az acr login --name ${{ .inputs.acr_name }} --username ${{ secrets.acr_username }} --password ${{ secrets.acr_password }} 
+          az acr login --name ${{ inputs.acr_name }} --username ${{ secrets.acr_username }} --password ${{ secrets.acr_password }} 
       
       - name: Save chart locally
         run: |
