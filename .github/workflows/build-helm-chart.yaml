@@ -11,7 +11,7 @@ on:
         type: string
         description: "Version of helm package to build. (ex: '1.2.3' or 'v1.2.4)"
         required: true
-      registry:
+      acr_name:
         type: string
         description: "Azure Containers Registry to push the package to"
         required: true
@@ -37,14 +37,23 @@ jobs:
         with:
           version: v3.10.0
       
+      - name: Install azure cli
+        run: |
+          which az || { curl -sL https://aka.ms/InstallAzureCLIDeb | sudo bash ; }
+
+      # - name: Log in to Azure ACR
+      #   run: |
+      #     helm registry login ${{ inputs.registry }} --username ${{ secrets.acr_username }} --password ${{ secrets.acr_password }} 
+      
       - name: Log in to Azure ACR
         run: |
-          helm registry login ${{ inputs.registry }} --username ${{ secrets.acr_username }} --password ${{ secrets.acr_password }} 
-      
+          az acr login --name ${{ inputs.acr_name }} --username ${{ secrets.acr_username }} --password ${{ secrets.acr_password }} 
+
       - name: Save chart locally
         run: |
           helm package ./ --version ${{ inputs.version }}
         
       - name: Push chart to ACR
         run: |
-          helm push "./${{ inputs.helm_name }}-${{ inputs.version }}.tgz" "oci://${{ inputs.registry }}/helm"
+          az acr helm push --name ${{ inputs.acr_name }} "$./${{ inputs.helm_name }}-${{ inputs.version }}.tgz"
+# helm push "./${{ inputs.helm_name }}-${{ inputs.version }}.tgz" "oci://${{ inputs.registry }}/helm"
