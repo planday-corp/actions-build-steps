@@ -65,5 +65,5 @@ jobs:
         
       - name: Push chart to ACR
         run: |
-          az acr helm push --name ${{ inputs.acr_name }} "$./${{ inputs.helm_name }}-${{ inputs.version }}.tgz"
+          az acr helm push --name ${{ inputs.acr_name }} "./${{ inputs.helm_name }}-${{ inputs.version }}.tgz"
 # helm push "./${{ inputs.helm_name }}-${{ inputs.version }}.tgz" "oci://${{ inputs.registry }}/helm"
