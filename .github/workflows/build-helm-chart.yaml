@@ -48,4 +48,7 @@ jobs:
       - name: Save chart locally
         run: |
           helm package ./ --version ${{ inputs.version }}
-        
+      
+      - name: Push chart to ACR
+        run: |
+          az acr helm push --name ${{ inputs.acr_name }} "./${{ inputs.helm_name }}-${{ inputs.version }}"
