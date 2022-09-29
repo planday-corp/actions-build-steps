@@ -23,7 +23,6 @@ on:
         required: true
     secrets: 
       azure_client_secret:
-        type: string
         required: true
       
 
