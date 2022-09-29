@@ -289,3 +289,11 @@ jobs:
             repo: context.repo.repo,
             body: output
           })
+      
+    - name: Save release number
+      run: echo ${{inputs.version}} > release_number.txt
+    - name: Upload release number
+      uses: actions/upload-artifact@v3
+      with:
+        name: release_number
+        path: release_number.txt
