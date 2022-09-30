@@ -17,7 +17,7 @@ on:
         required: true
       version:
         type: string
-        description: "Version of the Docker image to build. (ex: '1.2.3' or 'v1.2.4)"
+        description: "Version of the Docker image to build. (ex: '1.2.3' or 'v1.2.4')"
         required: true
       helm_version:
         type: string
