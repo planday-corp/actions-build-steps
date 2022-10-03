@@ -24,6 +24,7 @@ This reusable workflow will:
 | `octopus_server_url` | `string` | `true` | URL of the Octopus server |
 | `octopus_project_name` | `string` | `true` | Name of the project in Octopus |
 | `dockerargs` | `string` | `false` | Additional build arguments for docker, provided as a multiline string |
+| `sonarqube_skip_scan` | `boolean` | `false` | Whether to skip the Sonarqube scan. Default: false |
 | `sonarqube_server_url` | `string` | `true` | URL of the SonarQube server |
 
 ### Secrets

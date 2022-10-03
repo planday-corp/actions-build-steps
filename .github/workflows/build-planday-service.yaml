@@ -120,8 +120,17 @@ jobs:
       - name: Retrieve Sonarqube scan status
         shell: bash
         id: sonarqube_scan_status
-        if: github.event_name == 'pull_request' && ! ${{inputs.sonarqube_skip_scan}}
+        if: github.event_name == 'pull_request'
+        env:
+          sonarqube_skip_scan: ${{inputs.sonarqube_skip_scan}}
         run: |
+          if [ "$sonarqube_skip_scan" == "true" ]; then 
+            echo "::set-output name=sonarqube_scan_status::SKIPPED"
+            echo "::set-output name=sonarqube_server_url::${{inputs.sonarqube_server_url}}"
+            echo "::set-output name=image_name::${{inputs.image_name}}"
+            exit 0
+          fi
+
           key=$(curl -s -q \
             -u ${{secrets.sonarqube_token}}: \
             "${{inputs.sonarqube_server_url}}/api/project_analyses/search?project=${{inputs.image_name}}" \
@@ -189,7 +198,7 @@ jobs:
 
     - name: Retrieve SonarQube scan status
       id: sonarqube_scan_status
-      if: always() && github.event_name == 'pull_request' && ! ${{inputs.sonarqube_skip_scan}}
+      if: always() && github.event_name == 'pull_request'
       run: |
         echo "sonarqube_scan_status=${{needs.build-and-push.outputs.sonarqube_scan_status}}" >> $GITHUB_ENV
         echo "sonarqube_server_url=${{needs.build-and-push.outputs.sonarqube_server_url}}" >> $GITHUB_ENV
