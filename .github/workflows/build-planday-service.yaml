@@ -46,6 +46,11 @@ on:
         type: string
         description: "Additional build arguments for docker, provided as a multiline string"
         required: false
+      sonarqube_skip_scan:
+        type: boolean
+        description: "Whether to skip the Sonarqube scan. Default: false"
+        required: false
+        default: false
       sonarqube_server_url:
         type: string
         description: "URL of the SonarQube server"
@@ -115,7 +120,7 @@ jobs:
       - name: Retrieve Sonarqube scan status
         shell: bash
         id: sonarqube_scan_status
-        if: github.event_name == 'pull_request'
+        if: github.event_name == 'pull_request' && ! ${{inputs.sonarqube_skip_scan}}
         run: |
           key=$(curl -s -q \
             -u ${{secrets.sonarqube_token}}: \
@@ -184,7 +189,7 @@ jobs:
 
     - name: Retrieve SonarQube scan status
       id: sonarqube_scan_status
-      if: always() && github.event_name == 'pull_request'
+      if: always() && github.event_name == 'pull_request' && ! ${{inputs.sonarqube_skip_scan}}
       run: |
         echo "sonarqube_scan_status=${{needs.build-and-push.outputs.sonarqube_scan_status}}" >> $GITHUB_ENV
         echo "sonarqube_server_url=${{needs.build-and-push.outputs.sonarqube_server_url}}" >> $GITHUB_ENV
