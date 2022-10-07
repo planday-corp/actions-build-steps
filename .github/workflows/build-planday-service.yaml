@@ -7,6 +7,16 @@ on:
         type: string
         description: "Name of the Docker image to build. (ex: 'myapp')"
         required: true
+      docker_context:
+        type: string
+        description: "Docker build context. Default is the default git context (current directory)"
+        default: "."
+        required: false
+      dockerfile_path:
+        type: string
+        description: "Path to the Dockerfile. (default '{context}/Dockerfile')"
+        default: Dockerfile
+        required: false
       registry: 
         type: string
         description: "Azure Containers Registry to push the image to"
@@ -109,7 +119,8 @@ jobs:
         with:
           push: true
           tags: ${{ inputs.registry }}/${{inputs.image_name}}:${{inputs.version}}
-          file: Dockerfile
+          file: ${{inputs.dockerfile_path}}
+          context: ${{inputs.docker_context}}
           build-args: |
             SONARQUBE_URL=${{inputs.sonarqube_server_url}}
             SONARQUBE_PROJECT_NAME=${{inputs.image_name}}

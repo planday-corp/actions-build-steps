@@ -15,6 +15,8 @@ This reusable workflow will:
 | Name | Type | Required | Description |
 | :---: | :---: | :---: |  --- |
 | `image_name` | `string` | `true` | Name of the Docker image to build. (ex: `myapp`) |
+| `docker_context` | `string` | `false` | Docker build context. Default is the default git context (current directory `.`) |
+| `docker_file_path` | `string` | `false` | Path to the Dockerfile. Default `Dockerfile` |
 | `registry` | `string` | `true` | Azure Containers Registry to push the image to |
 | `registrydev` | `string` | `true` | Azure dev Containers Registry to pull base images from |
 | `version` | `string` | `true` | Version of the Docker image to build. (ex: `1.2.3` or `v1.2.4`) |
