@@ -94,6 +94,24 @@ jobs:
       image_name: ${{ steps.sonarqube_scan_status.outputs.image_name}}
     steps:
       - uses: actions/checkout@v3 
+      - id: get_branch_name
+        shell: python3 {0}
+        env:
+          GH_REF: ${{github.event.ref}}
+        run: |
+          import os
+
+        # GITHUB_HEAD_REF is only set in a pull_request and contains the name of the branch.
+        # ref: https://docs.github.com/en/actions/learn-github-actions/environment-variables#default-environment-variables
+        if os.environ.get('GITHUB_HEAD_REF') != "":
+          branch_name=os.environ["GITHUB_HEAD_REF"]
+        # GH_REF will contains the branch name that was pushed
+        # in the format of 'refs/heads/<branch_name>'
+        else:
+          # strip the 'refs/heads/' from the branch name
+          branch_name=os.environ["GH_REF"].replace("refs/heads/", "")
+
+        print("##[set-output name=branch;]branch_name)
 
       - name: Set up Docker
         uses: docker/setup-buildx-action@v1
@@ -127,7 +145,7 @@ jobs:
             OCT_URL=${{inputs.octopus_server_url}}
             OCT_PROJECT_NAME=${{inputs.octopus_project_name}}
             BUILD_REVISION=${{github.run_number}}
-            BUILD_BRANCH="${{steps.set_environment_name.outputs.environment_name}}"
+            BUILD_BRANCH=${{steps.get_branch_name.outputs.branch}}
             SONARQUBE_URL=${{inputs.sonarqube_server_url}}
             SONARQUBE_PROJECT_NAME=${{inputs.image_name}}
             SONARQUBE_TOKEN=${{secrets.sonarqube_token}}
