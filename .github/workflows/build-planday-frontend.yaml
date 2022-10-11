@@ -127,8 +127,7 @@ jobs:
             OCT_URL=${{inputs.octopus_server_url}}
             OCT_PROJECT_NAME=${{inputs.octopus_project_name}}
             BUILD_REVISION=${{github.run_number}}
-            BUILD_BRANCH=${{steps.set_environment_name.outputs.environment_name}}
-            BUILD_TIMESTAMP=${{github.event.created_at}}
+            BUILD_BRANCH="${{steps.set_environment_name.outputs.environment_name}}"
             SONARQUBE_URL=${{inputs.sonarqube_server_url}}
             SONARQUBE_PROJECT_NAME=${{inputs.image_name}}
             SONARQUBE_TOKEN=${{secrets.sonarqube_token}}
