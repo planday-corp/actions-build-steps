@@ -111,7 +111,7 @@ jobs:
           # strip the 'refs/heads/' from the branch name
           branch_name=os.environ["GH_REF"].replace("refs/heads/", "")
 
-        print("##[set-output name=branch;]branch_name)
+          print("##[set-output name=branch;]branch_name)
 
       - name: Set up Docker
         uses: docker/setup-buildx-action@v1
