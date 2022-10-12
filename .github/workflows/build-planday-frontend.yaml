@@ -361,7 +361,7 @@ jobs:
       run: kubectl get namespace ${{steps.get_environment_name.outputs.environment_name}}
 
     - name: Create AKS namespace
-      if: ${{ contains('test'), steps.get_environment_name.outputs.environment_name) }}
+      if: ${{ contains('test', steps.get_environment_name.outputs.environment_name) }}
       run: |
         if [[ "${steps.get_namespace.outcome}" != 'success' ]]; then
             echo "Creating ${{steps.get_environment_name.outputs.environment_name}} namespace ..."
