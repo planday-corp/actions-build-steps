@@ -1,4 +1,4 @@
-name: Build and push standard Planday Docker image and deploy in Kubernetes with Octopus Deploy
+name: Build and push Planday frontend service to Azure CDN
 
 on:
   workflow_call:
@@ -20,10 +20,6 @@ on:
       registry: 
         type: string
         description: "Azure Containers Registry to push the image to"
-        required: true
-      registrydev: 
-        type: string
-        description: "Azure dev Containers Registry to pull base images from"
         required: true
       version:
         type: string
@@ -94,7 +90,8 @@ jobs:
       image_name: ${{ steps.sonarqube_scan_status.outputs.image_name}}
     steps:
       - uses: actions/checkout@v3 
-      - id: get_branch_name
+      - name: Get branch name
+        id: get_branch_name
         run: |
           if [[ "${GITHUB_EVENT_NAME}" == "push" ]]; then
             echo "::set-output name=branch::$(echo ${GITHUB_REF##*/})"
@@ -103,7 +100,8 @@ jobs:
           else
             echo "::set-output name=branch::INVALID_EVENT_BRANCH_UNKNOWN"
           fi
-      - id: get_date
+      - name: Get time & date
+        id: get_date
         run: echo "::set-output name=date::$(TZ=Europe/Copenhagen date +'%d-%m-%Y %H:%M:%S')"
       - name: Set up Docker
         uses: docker/setup-buildx-action@v1
@@ -114,13 +112,6 @@ jobs:
         uses: docker/login-action@v1.10.0
         with:
           registry: ${{ inputs.registry }}
-          username: ${{ secrets.acr_username }}
-          password: ${{ secrets.acr_password }}
-
-      - name: Log in to Azure dev ACR
-        uses: docker/login-action@v1.10.0
-        with:
-          registry: ${{ inputs.registrydev }}
           username: ${{ secrets.acr_username }}
           password: ${{ secrets.acr_password }}
 
@@ -144,7 +135,7 @@ jobs:
             SONARQUBE_TOKEN=${{secrets.sonarqube_token}}
             SONARQUBE_VERSION=${{inputs.version}}
             ${{inputs.dockerargs}}
-      
+
       - name: Retrieve Sonarqube scan status
         shell: bash
         id: sonarqube_scan_status
@@ -172,25 +163,26 @@ jobs:
           echo "::set-output name=sonarqube_scan_status::$status"
           echo "::set-output name=sonarqube_server_url::${{inputs.sonarqube_server_url}}"
           echo "::set-output name=image_name::${{inputs.image_name}}"
-      
+
   create-octopus-environment:
-    name: Create an environment in Octopus Deploy
+    name: Create an environment in Octopus
     runs-on: self-hosted
     steps:
-    - name: Set environment name from branch name
+    - name: Sanitize branch name
       uses: planday-corp/actions-environment-name-sanitation@v1
       id: set_environment_name
 
-    - uses: planday-corp/actions-octopus-environment-config@v2
+    - name: Create Octopus environment
+      uses: planday-corp/actions-octopus-environment-config@v2
       with: 
         environment_name: "${{steps.set_environment_name.outputs.environment_name}}"
         delete_environment: false
         environment_to_copy: "stable"
         octopus_server_url: "${{inputs.octopus_server_url}}"
         octopus_api_key: ${{secrets.octopus_api_key}}
-      
+
   create-deploy-release:
-    name: Create a release in Octopus and deploy it to a dynamic environment
+    name: Create and deploy a release in Octopus
     runs-on: self-hosted
     outputs:
       release_number: ${{inputs.version}}
@@ -199,13 +191,13 @@ jobs:
       ! contains(fromJson('["refs/heads/main","refs/heads/master"]'), github.ref) }}
     needs: [build-and-push, create-octopus-environment]
     steps:
-    - name: Set environment name from branch name
-      uses: planday-corp/actions-environment-name-sanitation@v1
-      id: set_environment_name
-    
     - name: Install Octopus CLI 🐙
       uses: OctopusDeploy/install-octopus-cli-action@v1.1.10
-    
+
+    - name: Set Octopus environment
+      uses: planday-corp/actions-environment-name-sanitation@v1
+      id: set_environment_name
+
     - name: Deploy release 🐙
       uses: OctopusDeploy/create-release-action@v1.1.1
       id: octopus_release
@@ -331,7 +323,7 @@ jobs:
             repo: context.repo.repo,
             body: output
           })
-      
+
     - name: Save release number
       run: echo ${{inputs.version}} > release_number.txt
     - name: Upload release number
@@ -339,3 +331,39 @@ jobs:
       with:
         name: release_number
         path: release_number.txt
+
+  create-aks-namespace-and-gateways:
+    name: Create a namespace and a gateway helm release in AKS
+    runs-on: self-hosted
+    - name: Install Azure CLI
+      run: |
+        which az || { curl -sL https://aka.ms/InstallAzureCLIDeb | sudo bash ; }
+
+    - name: Log in to Azure
+      uses: azure/login@v1
+      with:
+        creds: ${{ secrets.kubernetes_azure_credentials }}
+
+    - name: Connect to the AKS cluster
+      uses: azure/aks-set-context@v3
+      with:
+        resource-group: ${{inputs.aks_resource_group}}
+        cluster-name: ${{inputs.aks_cluster_name}}
+        admin: 'true'
+
+    - name: Sanitize AKS namespace
+      uses: planday-corp/actions-environment-name-sanitation@v1
+      id: set_environment_name
+
+    - name: Check if AKS namespace already exists
+      id: get_namespace
+      run: kubectl get namespace ${{steps.get_environment_name.outputs.environment_name}}
+
+    - name: Create AKS namespace
+      if: ${{ contains('test'), steps.get_environment_name.outputs.environment_name) }}
+      run: |
+        if [[ "${steps.get_namespace.outcome}" != 'success' ]]; then
+            echo "Creating ${{steps.get_environment_name.outputs.environment_name}} namespace ..."
+            kubectl create namespace ${{steps.get_environment_name.outputs.environment_name}}
+            kubectl label namespace/${{steps.get_environment_name.outputs.environment_name}} environment=${{steps.get_environment_name.outputs.environment_name}} istio-injection=enabled
+          fi
