@@ -355,7 +355,7 @@ jobs:
     - name: Log in to Azure
       uses: azure/login@v1
       with:
-        credentials: ${{ secrets.KUBERNETES_AZURE_CREDENTIALS }}
+        creds: ${{ secrets.KUBERNETES_AZURE_CREDENTIALS }}
 
     - name: Connect to the AKS cluster
       uses: azure/aks-set-context@v3
