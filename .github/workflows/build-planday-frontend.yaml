@@ -83,6 +83,9 @@ on:
       sonarqube_token:
         description: "SonarQube server token"
         required: true
+      kubernetes_azure_credentials:
+        description: 'Credentials of the Azure SP in json format: `{"clientId":"xxxxxxx","clientSecret":"XXXXXXXX","subscriptionId":"xxxxxx","tenantId":"xxxxx"}`'
+        required: true
 
     outputs:
       release_number: 
@@ -355,7 +358,7 @@ jobs:
     - name: Log in to Azure
       uses: azure/login@v1
       with:
-        creds: ${{ secrets.KUBERNETES_AZURE_CREDENTIALS }}
+        creds: ${{ secrets.kubernetes_azure_credentials }}
 
     - name: Connect to the AKS cluster
       uses: azure/aks-set-context@v3
