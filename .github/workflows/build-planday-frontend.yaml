@@ -335,6 +335,7 @@ jobs:
   create-aks-namespace-and-gateways:
     name: Create a namespace and a gateway helm release in AKS
     runs-on: self-hosted
+    steps:
     - name: Install Azure CLI
       run: |
         which az || { curl -sL https://aka.ms/InstallAzureCLIDeb | sudo bash ; }
