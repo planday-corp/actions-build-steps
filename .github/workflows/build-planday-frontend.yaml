@@ -83,6 +83,15 @@ on:
       sonarqube_token:
         description: "SonarQube server token"
         required: true
+      client_id:
+        description: "Service Principal Client ID for Planday-github"
+        required: true
+      tenant_id:
+        description: "Service Principal Tenant ID for Planday-github"
+        required: true
+      subscription_id:
+        description: "Default Subscription"
+        required: true
 
     outputs:
       release_number: 
