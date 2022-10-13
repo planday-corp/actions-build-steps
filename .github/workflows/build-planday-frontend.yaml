@@ -83,9 +83,6 @@ on:
       sonarqube_token:
         description: "SonarQube server token"
         required: true
-      kubernetes_azure_credentials:
-        description: 'Credentials of the Azure SP in json format: `{"clientId":"xxxxxxx","clientSecret":"XXXXXXXX","subscriptionId":"xxxxxx","tenantId":"xxxxx"}`'
-        required: true
 
     outputs:
       release_number: 
@@ -350,15 +347,13 @@ jobs:
     - name: Install Azure CLI
       run: |
         which az || { curl -sL https://aka.ms/InstallAzureCLIDeb | sudo bash ; }
-    
-    - uses: Azure/setup-kubectl@v3
-      with:
-        version: 'v1.22.11'
 
     - name: Log in to Azure
       uses: azure/login@v1
       with:
-        creds: ${{ secrets.kubernetes_azure_credentials }}
+        client-id: ${{ secrets.AZURE_CLIENT_ID }}
+        tenant-id: ${{ secrets.AZURE_TENANT_ID }}
+        subscription-id: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
 
     - name: Connect to the AKS cluster
       uses: azure/aks-set-context@v3
