@@ -376,8 +376,8 @@ jobs:
       id: set_environment_name
 
     - name: Check if AKS namespace already exists
-      id: get_namespace
-      run: kubectl get namespace ${{steps.get_environment_name.outputs.environment_name}}
+      id: get_namespaces
+      run: kubectl get namespaces ${{steps.get_environment_name.outputs.environment_name}}
 
     - name: Create AKS namespace
       if: ${{ contains('test', steps.get_environment_name.outputs.environment_name) }}
