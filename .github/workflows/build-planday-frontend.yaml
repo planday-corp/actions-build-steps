@@ -361,7 +361,7 @@ jobs:
       uses: azure/login@v1
       with:
         client-id: ${{ secrets.client_id }}
-        tenant-id: ${{ secrets.client_id }}
+        tenant-id: ${{ secrets.tenant_id }}
         subscription-id: ${{ secrets.subscription_id }}
 
     - name: Connect to the AKS cluster
