@@ -388,9 +388,8 @@ jobs:
       continue-on-error: true
 
     - name: Create AKS namespace
-      if: ${{ contains('test', steps.set_namespace_name.outputs.environment_name) }}
+      if: ${{ failure() || success() }} && ${{ contains('test', steps.set_namespace_name.outputs.environment_name) }}
       run: |
-        echo ${{steps.get_namespace.outcome}}
         if [[ ${{steps.get_namespace.outcome}} != 'success' ]]; then
             echo "Creating ${{steps.set_namespace_name.outputs.environment_name}} namespace ..."
             kubectl create namespace ${{steps.set_namespace_name.outputs.environment_name}}
