@@ -380,18 +380,18 @@ jobs:
 
     - name: Sanitize AKS namespace
       uses: planday-corp/actions-environment-name-sanitation@v1
-      id: set_environment_name
+      id: set_namespace_name
 
     - name: Check if AKS namespace already exists
       id: get_namespaces
-      run: kubectl get namespaces ${{steps.get_environment_name.outputs.environment_name}}
+      run: kubectl get namespaces ${{steps.set_namespace_name.outputs.environment_name}}
 
     - name: Create AKS namespace
-      if: ${{ contains('test', steps.get_environment_name.outputs.environment_name) }}
+      if: ${{ contains('test', steps.set_namespace_name.outputs.environment_name) }}
       run: |
         echo ${{steps.get_namespaces.outcome}}
         if [[ ${{steps.get_namespaces.outcome}} != 'success' ]]; then
-            echo "Creating ${{steps.get_environment_name.outputs.environment_name}} namespace ..."
-            kubectl create namespace ${{steps.get_environment_name.outputs.environment_name}}
-            kubectl label namespace/${{steps.get_environment_name.outputs.environment_name}} environment=${{steps.get_environment_name.outputs.environment_name}} istio-injection=enabled
+            echo "Creating ${{steps.set_namespace_name.outputs.environment_name}} namespace ..."
+            kubectl create namespace ${{steps.set_namespace_name.outputs.environment_name}}
+            kubectl label namespace/${{steps.set_namespace_name.outputs.environment_name}} environment=${{steps.set_namespace_name.outputs.environment_name}} istio-injection=enabled
           fi
