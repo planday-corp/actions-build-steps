@@ -389,8 +389,8 @@ jobs:
     - name: Create AKS namespace
       if: ${{ contains('test', steps.get_environment_name.outputs.environment_name) }}
       run: |
-        echo ${steps.get_namespaces.outcome}
-        if [[ ${steps.get_namespaces.outcome} != 'success' ]]; then
+        echo ${{steps.get_namespaces.outcome}}
+        if [[ ${{steps.get_namespaces.outcome}} != 'success' ]]; then
             echo "Creating ${{steps.get_environment_name.outputs.environment_name}} namespace ..."
             kubectl create namespace ${{steps.get_environment_name.outputs.environment_name}}
             kubectl label namespace/${{steps.get_environment_name.outputs.environment_name}} environment=${{steps.get_environment_name.outputs.environment_name}} istio-injection=enabled
