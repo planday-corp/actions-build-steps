@@ -383,14 +383,15 @@ jobs:
       id: set_namespace_name
 
     - name: Check if AKS namespace already exists
-      id: get_namespaces
-      run: kubectl get namespaces ${{steps.set_namespace_name.outputs.environment_name}}
+      id: get_namespace
+      run: kubectl get namespace ${{steps.set_namespace_name.outputs.environment_name}}
+      continue-on-error: true
 
     - name: Create AKS namespace
       if: ${{ contains('test', steps.set_namespace_name.outputs.environment_name) }}
       run: |
-        echo ${{steps.get_namespaces.outcome}}
-        if [[ ${{steps.get_namespaces.outcome}} != 'success' ]]; then
+        echo ${{steps.get_namespace.outcome}}
+        if [[ ${{steps.get_namespace.outcome}} != 'success' ]]; then
             echo "Creating ${{steps.set_namespace_name.outputs.environment_name}} namespace ..."
             kubectl create namespace ${{steps.set_namespace_name.outputs.environment_name}}
             kubectl label namespace/${{steps.set_namespace_name.outputs.environment_name}} environment=${{steps.set_namespace_name.outputs.environment_name}} istio-injection=enabled
