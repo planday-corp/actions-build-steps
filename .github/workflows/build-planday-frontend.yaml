@@ -400,7 +400,7 @@ jobs:
       uses: azure/k8s-bake@v2.1
       with:
         renderEngine: 'helm'
-        helmChart: './helm-charts/istio-gateways/'
+        helmChart: 'helm-charts/istio-gateways/'
         overrides: |     
           tls.uniqueDnsName:"certificate-${{steps.set_namespace_name.outputs.environment_name}}"
           tls.domains:"""{'*.headless-wp.$${{steps.set_namespace_name.outputs.environment_name}}.planday.cloud','*.${{steps.set_namespace_name.outputs.environment_name}}.planday.cloud',${{steps.set_namespace_name.outputs.environment_name}}.planday.cloud}"""
