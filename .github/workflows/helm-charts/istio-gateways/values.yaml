@@ -1,0 +1,18 @@
+gatewayName: default
+
+certManager:
+  issuer: letsencrypt-prod  
+
+tls:
+  uniqueDnsName:
+  uniqueDnsNameDomain: "planday.cloud"
+  domains: []
+  httpsRedirect: true
+
+gateways:
+  internal:
+    enabled: false
+    annotations: {}
+  external:
+    enabled: false
+    annotations: {}

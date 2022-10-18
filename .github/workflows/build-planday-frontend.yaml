@@ -394,4 +394,24 @@ jobs:
             echo "Creating ${{steps.set_namespace_name.outputs.environment_name}} namespace ..."
             kubectl create namespace ${{steps.set_namespace_name.outputs.environment_name}}
             kubectl label namespace/${{steps.set_namespace_name.outputs.environment_name}} environment=${{steps.set_namespace_name.outputs.environment_name}} istio-injection=enabled
-          fi
+        fi
+    
+    - name: Create Helm release
+      uses: azure/k8s-bake@v2.1
+      with:
+        renderEngine: 'helm'
+        helmChart: './helm-charts/istio-gateways/'
+        overrides: |     
+          tls.uniqueDnsName:"certificate-${{steps.set_namespace_name.outputs.environment_name}}"
+          tls.domains:"""{'*.headless-wp.$${{steps.set_namespace_name.outputs.environment_name}}.planday.cloud','*.${{steps.set_namespace_name.outputs.environment_name}}.planday.cloud',${{steps.set_namespace_name.outputs.environment_name}}.planday.cloud}"""
+          tls.hosts:"""{'*.${{steps.set_namespace_name.outputs.environment_name}}.planday.cloud',${{steps.set_namespace_name.outputs.environment_name}}.planday.cloud}"""
+          tls.httpsRedirect:"false"
+          gateways.internal.enabled:"true"
+          gateways.external.enabled:"false"
+        helm-version: 'latest' 
+      id: create_helm_release
+    
+    - name: Deploy Helm release
+      uses: Azure/k8s-deploy@v1
+      with:
+        manifests: ${{ steps.create_helm_release.outputs.manifestsBundle }}
