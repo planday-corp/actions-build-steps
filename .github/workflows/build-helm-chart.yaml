@@ -30,7 +30,7 @@ jobs:
   build-and-push:
     permissions:
       id-token: write # This is required for requesting the OIDC JWT
-      content: read
+      contents: read
     name: Build and push helm package to ACR
     runs-on: ubuntu-22.04
     steps:
