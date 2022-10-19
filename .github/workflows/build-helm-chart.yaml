@@ -1,0 +1,67 @@
+name: Build and push helm package to azure acr
+
+on:
+  workflow_call:
+    inputs:
+      helm_name:
+        type: string
+        description: "Name of the helm package"
+        required: true
+      version:
+        type: string
+        description: "Version of helm package to build. (ex: '1.2.3' or 'v1.2.4)"
+        required: true
+      acr_name:
+        type: string
+        description: "Azure Containers Registry to push the package to"
+        required: true
+    secrets:
+      azure_client_id:
+        description: "The Client ID which should be used"
+        required: true
+      azure_tenant_id:
+        description: "The Tenant ID which should be used"
+        required: true
+      azure_subscription_id:
+        description: "The Subscription ID which should be used"
+        required: true
+      
+
+jobs:
+  build-and-push:
+    permissions:
+      id-token: write # This is required for requesting the OIDC JWT
+      contents: read
+    name: Build and push helm package to ACR
+    runs-on: ubuntu-22.04
+    steps:
+      - uses: actions/checkout@v3
+
+      - name: Set up Helm
+        uses: azure/setup-helm@v3
+        id: install
+        with:
+          version: v3.10.0
+      
+      - name: Install azure cli
+        run: |
+          which az || { curl -sL https://aka.ms/InstallAzureCLIDeb | sudo bash ; }
+
+      - name: 'Az CLI login'
+        uses: azure/login@v1
+        with:
+          client-id: ${{ secrets.azure_client_id }}
+          tenant-id: ${{ secrets.azure_tenant_id }}
+          subscription-id: ${{ secrets.azure_subscription_id }}
+
+      - name: Add helm repo
+        run: |
+          az acr helm repo add --name ${{ inputs.acr_name }}
+
+      - name: Save chart locally
+        run: |
+          helm package ./ --version ${{ inputs.version }}
+        
+      - name: Push chart to ACR
+        run: |
+          az acr helm push --name ${{ inputs.acr_name }} "./${{ inputs.helm_name }}-${{ inputs.version }}.tgz"
