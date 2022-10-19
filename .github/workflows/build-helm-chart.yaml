@@ -21,8 +21,8 @@ on:
       azure_client_id:
         type: string
         required: true
-    secrets: 
-      azure_client_secret:
+      azure_subscription_id:
+        type: string
         required: true
       
 
@@ -43,17 +43,12 @@ jobs:
         run: |
           which az || { curl -sL https://aka.ms/InstallAzureCLIDeb | sudo bash ; }
 
-      # - name: Log in to Azure ACR
-      #   run: |
-      #     helm registry login ${{ inputs.registry }} --username ${{ secrets.acr_username }} --password ${{ secrets.acr_password }} 
-      
-      # - name: Log in to Azure ACR
-      #   run: |
-      #     az acr login --name ${{ inputs.acr_name }} --username ${{ secrets.acr_username }} --password ${{ secrets.acr_password }} 
-
-      - name: Log in to Azure cli
-        run: | 
-          az login --service-principal -u ${{ inputs.azure_client_id }} -t ${{ inputs.azure_tenant_id }} -p ${{ secrets.azure_client_secret }}
+      - name: 'Az CLI login'
+        uses: azure/login@v1
+        with:
+          client-id: ${{ inputs.azure_client_id }}
+          tenant-id: ${{ inputs.azure_tenant_id }}
+          subscription-id: ${{ inputs.azure_subscription_id }}
 
       - name: Add helm repo
         run: |
@@ -66,4 +61,3 @@ jobs:
       - name: Push chart to ACR
         run: |
           az acr helm push --name ${{ inputs.acr_name }} "./${{ inputs.helm_name }}-${{ inputs.version }}.tgz"
-# helm push "./${{ inputs.helm_name }}-${{ inputs.version }}.tgz" "oci://${{ inputs.registry }}/helm"
