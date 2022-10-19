@@ -7,6 +7,11 @@ on:
         type: string
         description: "Name of the helm package"
         required: true
+      helm_path:
+        type: string
+        description: "Path of the helm package"
+        required: false
+        default: "./"
       version:
         type: string
         description: "Version of helm package to build. (ex: '1.2.3' or 'v1.2.4)"
@@ -60,7 +65,7 @@ jobs:
 
       - name: Save chart locally
         run: |
-          helm package ./ --version ${{ inputs.version }}
+          helm package ${{ inputs.helm_path }} --version ${{ inputs.version }}
         
       - name: Push chart to ACR
         run: |
