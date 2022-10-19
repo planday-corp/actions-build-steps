@@ -15,14 +15,15 @@ on:
         type: string
         description: "Azure Containers Registry to push the package to"
         required: true
-      azure_tenant_id:
-        type: string
-        required: true
+    secrets:
       azure_client_id:
-        type: string
+        description: "The Client ID which should be used"
+        required: true
+      azure_tenant_id:
+        description: "The Tenant ID which should be used"
         required: true
       azure_subscription_id:
-        type: string
+        description: "The Subscription ID which should be used"
         required: true
       
 
