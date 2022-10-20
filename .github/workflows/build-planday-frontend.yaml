@@ -391,6 +391,7 @@ jobs:
 
     - name: Log in to Azure ACR
       run: |
+        az login
         az acr login -n ${{ inputs.container_registry_name }}
 
     - name: Add Helm repo
