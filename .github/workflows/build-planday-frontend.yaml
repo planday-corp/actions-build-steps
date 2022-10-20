@@ -389,9 +389,15 @@ jobs:
             kubectl label namespace/${{ steps.set_namespace_name.outputs.environment_name }} environment=${{ steps.set_namespace_name.outputs.environment_name }} istio-injection=enabled
         fi
 
+    - name: Log in to Azure to update permissions
+      uses: azure/login@v1
+      with:
+        client-id: ${{ secrets.client_id }}
+        tenant-id: ${{ secrets.tenant_id }}
+        subscription-id: ${{ inputs.container_registry_subscription }}
+
     - name: Log in to Azure ACR
       run: |
-        az login
         az acr login -n ${{ inputs.container_registry_name }}
 
     - name: Add Helm repo
