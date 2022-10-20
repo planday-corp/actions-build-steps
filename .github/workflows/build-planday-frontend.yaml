@@ -397,11 +397,8 @@ jobs:
         password: ${{ secrets.acr_password }}
 
     - name: Change Azure subscription
-      uses: azure/login@v1
-      with:
-        client-id: ${{ secrets.client_id }}
-        tenant-id: ${{ secrets.tenant_id }}
-        subscription-id: ${{ inputs.container_registry_subscription }}
+      run: |
+        az account set --subscription ${{ inputs.container_registry_subscription }}
 
     - name: Add Helm repo
       run: |
