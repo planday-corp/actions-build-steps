@@ -3,61 +3,71 @@ name: Build and push Planday frontend service to Azure CDN
 on:
   workflow_call:
     inputs:
-      image_name:
+      frontend_image_name:
         type: string
-        description: "Name of the Docker image to build. (ex: 'myapp')"
+        description: "Name of the Docker image to build."
+        required: true
+      frontend_image_version:
+        type: string
+        description: "Version of the Docker image to build."
         required: true
       docker_context:
         type: string
-        description: "Docker build context. Default is the default git context (current directory)"
+        description: "Docker build context (defaults to the current directory)."
         default: "."
         required: false
       dockerfile_path:
         type: string
-        description: "Path to the Dockerfile. (default '{context}/Dockerfile')"
+        description: "Path to the Dockerfile (defaults to '{context}/Dockerfile')."
         default: Dockerfile
         required: false
-      registry: 
+      container_registry_name:
         type: string
-        description: "Azure Containers Registry to push the image to"
-        required: true
-      version:
+        description: "Name of the Azure Containers Registry."
+        default: "plandaycontainers.azurecr.io"
+        required: false
+      container_registry_subscription:
         type: string
-        description: "Version of the Docker image to build. (ex: '1.2.3' or 'v1.2.4')"
-        required: true
+        description: "Subscription of the Azure Containers Registry."
+        default: "3e3c8001-a7f4-4d21-b3c9-e3f03736f094"
+        required: false
       helm_chart_name:
         type: string
-        description: Helm chart used for the namespace's certificate and gateway
-        default: certificate-and-gateway
+        description: "Helm chart to use (defaults to 'certificate-and-gateway')."
+        default: "certificate-and-gateway"
         required: false
       octopus_server_url:
         type: string
-        description: "URL of the Octopus server"
+        description: "URL of the Octopus server."
         required: true
       octopus_project_name:
         type: string
-        description: "Name of the project in Octopus"
+        description: "Name of the Octopus project."
         required: true
       dockerargs:
         type: string
-        description: "Additional build arguments for docker, provided as a multiline string"
+        description: "Additional build arguments for Docker (optional)."
         required: false
       sonarqube_skip_scan:
         type: boolean
-        description: "Whether to skip the Sonarqube scan. Default: false"
-        required: false
+        description: "Whether to skip the Sonarqube scan or not (defaults to 'false')."
         default: false
+        required: false
       sonarqube_server_url:
         type: string
-        description: "URL of the SonarQube server"
+        description: "URL of the SonarQube server."
         required: true
+      aks_subscription:
+        description: "Subscription of the AKS cluster."
+        default: "ef511dc7-0ed7-4df2-9195-338e66559492"
+        required: false
       aks_resource_group:
         type: string
-        description: "Name of the AKS resource group"
+        description: "Resource Group of the AKS cluster."
         required: true
       aks_cluster_name:
         type: string
-        description: "Name of the AKS cluster"
+        description: "Name of the AKS cluster."
         required: true
 
     secrets:
@@ -69,7 +79,7 @@ on:
         required: true
       octopus_api_key:
         description: "API key of the Octopus server"
-        required: true      
+        required: true
       sonarqube_token:
         description: "SonarQube server token"
         required: true
@@ -79,9 +89,7 @@ on:
       tenant_id:
         description: "Service Principal Tenant ID for Planday-github"
         required: true
-      subscription_id:
-        description: "Default Subscription"
-        required: true
+      
 
     outputs:
       release_number: 
@@ -118,7 +126,7 @@ jobs:
       - name: Log in to Azure ACR
         uses: docker/login-action@v1.10.0
         with:
-          registry: ${{ inputs.registry }}
+          registry: ${{ inputs.container_registry_name }}
           username: ${{ secrets.acr_username }}
           password: ${{ secrets.acr_password }}
 
@@ -126,11 +134,11 @@ jobs:
         uses: docker/build-push-action@v2
         with:
           push: true
-          tags: ${{ inputs.registry }}/${{ inputs.image_name }}:${{ inputs.version }}
+          tags: ${{ inputs.container_registry_name }}/${{ inputs.frontend_image_name }}:${{ inputs.frontend_image_version }}
           file: ${{ inputs.dockerfile_path }}
           context: ${{ inputs.docker_context }}
           build-args: |
-            PACKAGE_VERSION=${{ inputs.version }}
+            PACKAGE_VERSION=${{ inputs.frontend_image_version }}
             OCT_API_KEY=${{ secrets.octopus_api_key }}
             OCT_URL=${{ inputs.octopus_server_url }}
             OCT_PROJECT_NAME=${{ inputs.octopus_project_name }}
@@ -138,9 +146,9 @@ jobs:
             BUILD_BRANCH=${{ steps.get_branch_name.outputs.branch }}
             BUILD_TIMESTAMP=${{ steps.get_date.outputs.date }}
             SONARQUBE_URL=${{ inputs.sonarqube_server_url }}
-            SONARQUBE_PROJECT_NAME=${{ inputs.image_name }}
+            SONARQUBE_PROJECT_NAME=${{ inputs.frontend_image_name }}
             SONARQUBE_TOKEN=${{ secrets.sonarqube_token }}
-            SONARQUBE_VERSION=${{ inputs.version}}
+            SONARQUBE_VERSION=${{ inputs.frontend_image_version}}
             ${{ inputs.dockerargs }}
 
       - name: Retrieve Sonarqube scan status
@@ -153,14 +161,14 @@ jobs:
           if [ "$sonarqube_skip_scan" == "true" ]; then 
             echo "::set-output name=sonarqube_scan_status::SKIPPED"
             echo "::set-output name=sonarqube_server_url::${{ inputs.sonarqube_server_url }}"
-            echo "::set-output name=image_name::${{ inputs.image_name }}"
+            echo "::set-output name=image_name::${{ inputs.frontend_image_name }}"
             exit 0
           fi
 
           key=$(curl -s -q \
             -u ${{ secrets.sonarqube_token }}: \
-            "${{ inputs.sonarqube_server_url }}/api/project_analyses/search?project=${{ inputs.image_name }}" \
-            | jq -r '.analyses[] | select(.projectVersion=="${{ inputs.version }}")' \
+            "${{ inputs.sonarqube_server_url }}/api/project_analyses/search?project=${{ inputs.frontend_image_name }}" \
+            | jq -r '.analyses[] | select(.projectVersion=="${{ inputs.frontend_image_version }}")' \
             | jq -r -s 'sort_by(.date) | last | .key')
 
           status=$(curl -s -q \
@@ -169,7 +177,7 @@ jobs:
           
           echo "::set-output name=sonarqube_scan_status::$status"
           echo "::set-output name=sonarqube_server_url::${{ inputs.sonarqube_server_url }}"
-          echo "::set-output name=image_name::${{ inputs.image_name }}"
+          echo "::set-output name=image_name::${{ inputs.frontend_image_name }}"
 
   create-octopus-environment:
     name: Create an environment in Octopus
@@ -192,7 +200,7 @@ jobs:
     name: Create and deploy a release in Octopus
     runs-on: self-hosted
     outputs:
-      release_number: ${{ inputs.version }}
+      release_number: ${{ inputs.frontend_image_version }}
     # When previous jobs succeded and the branch isn't "main" or "master"
     if: ${{ contains(join(needs.*.result, ','), 'success') && 
       ! contains(fromJson('["refs/heads/main","refs/heads/master"]'), github.ref) }}
@@ -214,11 +222,11 @@ jobs:
         server: ${{ inputs.octopus_server_url }}
         space: 'Default'
         project: ${{ inputs.octopus_project_name }}
-        release_number: ${{ inputs.version }}
+        release_number: ${{ inputs.frontend_image_version }}
         progress: true
         ignore_existing: true
         packages: |
-          ${{ inputs.image_name }}:${{ inputs.version }}
+          ${{ inputs.frontend_image_name }}:${{ inputs.frontend_image_version }}
 
     - name: Retrieve SonarQube scan status
       id: sonarqube_scan_status
@@ -245,7 +253,7 @@ jobs:
         curl -s -q \
           -H "X-Octopus-ApiKey: ${{ secrets.octopus_api_key }}" \
           -H "Accept: application/json" \
-          "${{ inputs.octopus_server_url }}/api/projects/$project_id/releases/${{ inputs.version }}" \
+          "${{ inputs.octopus_server_url }}/api/projects/$project_id/releases/${{ inputs.frontend_image_version }}" \
           | jq -r -M '' > release.json
 
         # Read space id
@@ -255,7 +263,7 @@ jobs:
         release_packages="$(jq -c -r -M '.SelectedPackages' release.json)"
 
         # Reconstruct the release URL
-        release_url="${{ inputs.octopus_server_url }}/app#/$space_id/projects/$project_slug/deployments/releases/${{ inputs.version }}"
+        release_url="${{ inputs.octopus_server_url }}/app#/$space_id/projects/$project_slug/deployments/releases/${{ inputs.frontend_image_version }}"
 
         echo "release_url=$release_url" >> $GITHUB_ENV
         echo "release_packages=$release_packages" >> $GITHUB_ENV
@@ -284,7 +292,7 @@ jobs:
             md_table += '| ' + pkg.ActionName + ' | `' + pkg.Version + '` | `' + pkg.PackageReferenceName + '` |\n';
           }
 
-          let output_octopus = `# 🚀 Octopus Deploy - release v${{ inputs.version }} 🚀
+          let output_octopus = `# 🚀 Octopus Deploy - release v${{ inputs.frontend_image_version }} 🚀
 
           <details><summary>Details</summary>
           
@@ -326,7 +334,7 @@ jobs:
           })
 
     - name: Save release number
-      run: echo ${{ inputs.version }} > release_number.txt
+      run: echo ${{ inputs.frontend_image_version }} > release_number.txt
     - name: Upload release number
       uses: actions/upload-artifact@v3
       with:
@@ -353,7 +361,7 @@ jobs:
       with:
         client-id: ${{ secrets.client_id }}
         tenant-id: ${{ secrets.tenant_id }}
-        subscription-id: ${{ secrets.subscription_id }}
+        subscription-id: ${{ inputs.aks_subscription }}
 
     - name: Connect to the AKS cluster
       uses: azure/aks-set-context@v3
@@ -383,17 +391,24 @@ jobs:
     - name: Log in to Azure Container Registry
       uses: docker/login-action@v1.10.0
       with:
-        registry: ${{ inputs.registry }}
+        registry: ${{ inputs.container_registry_name }}
         username: ${{ secrets.acr_username }}
         password: ${{ secrets.acr_password }}
 
+    - name: Change Azure subscription
+      uses: azure/login@v1
+      with:
+        client-id: ${{ secrets.client_id }}
+        tenant-id: ${{ secrets.tenant_id }}
+        subscription-id: ${{ inputs.container_registry_subscription }}
+
     - name: Add Helm repo
       run: |
-        az acr helm repo add --name ${{ inputs.registry }}
+        az acr helm repo add --name ${{ inputs.container_registry_name }}
 
     - name: Deploy Helm release
       run: |
         namespace=$(echo ${{ steps.set_namespace_name.outputs.environment_name }} | tr "[:upper:]" "[:lower:]")
-        registry=$(echo ${{ inputs.registry }} | sed 's/.azurecr.io//g' )
+        registry=$(echo ${{ inputs.container_registry_name }} | sed 's/.azurecr.io//g' )
 
-        helm upgrade ${{ inputs.helm_chart_name }} --install --namespace=$namespace --set image.name=${{ inputs.image_name }} --set image.tag=${{ inputs.image_version }} --set tls.uniqueDnsName="certificate-$namespace" --set tls.domains="""{'*.headless-wp.$namespace.planday.cloud','*.$namespace.planday.cloud',$namespace.planday.cloud}""" --set tls.hosts="""{'*.$namespace.planday.cloud',$namespace.planday.cloud}""" --set tls.httpsRedirect="false" --set gateways.internal.enabled="true" --set gateways.external.enabled="false" $registry/${{ inputs.helm_chart_name }}
+        helm upgrade ${{ inputs.helm_chart_name }} --install --namespace=$namespace --set tls.uniqueDnsName="certificate-$namespace" --set tls.domains="""{'*.headless-wp.$namespace.planday.cloud','*.$namespace.planday.cloud',$namespace.planday.cloud}""" --set tls.hosts="""{'*.$namespace.planday.cloud',$namespace.planday.cloud}""" --set tls.httpsRedirect="false" --set gateways.internal.enabled="true" --set gateways.external.enabled="false" $registry/${{ inputs.helm_chart_name }}
