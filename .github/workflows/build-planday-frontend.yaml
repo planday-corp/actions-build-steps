@@ -25,20 +25,10 @@ on:
         type: string
         description: "Version of the Docker image to build. (ex: '1.2.3' or 'v1.2.4')"
         required: true
-      helm_version:
+      helm_chart_name:
         type: string
-        description: "Helm version"
-        default: "3.4.0"
-        required: false
-      helm_chart:
-        type: string
-        description: "Helm chart version used to deploy the Docker image"
-        default: '1.0.212'
-        required: false
-      gateway:
-        type: string
-        description: "Gateway version"
-        default: '1.0.212'
+        description: Helm chart used for the namespace's certificate and gateway
+        default: certificate-and-gateway
         required: false
       octopus_server_url:
         type: string
@@ -96,15 +86,15 @@ on:
     outputs:
       release_number: 
         description: "Octopus release number"
-        value: ${{jobs.create-deploy-release.outputs.release_number}}
+        value: ${{ jobs.create-deploy-release.outputs.release_number }}
 jobs:
   build-and-push:
     name: Build and push Docker image to ACR
     runs-on: self-hosted
     outputs:
       sonarqube_scan_status: ${{ steps.sonarqube_scan_status.outputs.sonarqube_scan_status }}
-      sonarqube_server_url: ${{ steps.sonarqube_scan_status.outputs.sonarqube_server_url}}
-      image_name: ${{ steps.sonarqube_scan_status.outputs.image_name}}
+      sonarqube_server_url: ${{ steps.sonarqube_scan_status.outputs.sonarqube_server_url }}
+      image_name: ${{ steps.sonarqube_scan_status.outputs.image_name }}
     steps:
       - uses: actions/checkout@v3 
       - name: Get branch name
@@ -136,50 +126,50 @@ jobs:
         uses: docker/build-push-action@v2
         with:
           push: true
-          tags: ${{ inputs.registry }}/${{inputs.image_name}}:${{inputs.version}}
-          file: ${{inputs.dockerfile_path}}
-          context: ${{inputs.docker_context}}
+          tags: ${{ inputs.registry }}/${{ inputs.image_name }}:${{ inputs.version }}
+          file: ${{ inputs.dockerfile_path }}
+          context: ${{ inputs.docker_context }}
           build-args: |
-            PACKAGE_VERSION=${{inputs.version}}
-            OCT_API_KEY=${{secrets.octopus_api_key}}
-            OCT_URL=${{inputs.octopus_server_url}}
-            OCT_PROJECT_NAME=${{inputs.octopus_project_name}}
-            BUILD_REVISION=${{github.run_number}}
-            BUILD_BRANCH=${{steps.get_branch_name.outputs.branch}}
-            BUILD_TIMESTAMP=${{steps.get_date.outputs.date}}
-            SONARQUBE_URL=${{inputs.sonarqube_server_url}}
-            SONARQUBE_PROJECT_NAME=${{inputs.image_name}}
-            SONARQUBE_TOKEN=${{secrets.sonarqube_token}}
-            SONARQUBE_VERSION=${{inputs.version}}
-            ${{inputs.dockerargs}}
+            PACKAGE_VERSION=${{ inputs.version }}
+            OCT_API_KEY=${{ secrets.octopus_api_key }}
+            OCT_URL=${{ inputs.octopus_server_url }}
+            OCT_PROJECT_NAME=${{ inputs.octopus_project_name }}
+            BUILD_REVISION=${{ github.run_number }}
+            BUILD_BRANCH=${{ steps.get_branch_name.outputs.branch }}
+            BUILD_TIMESTAMP=${{ steps.get_date.outputs.date }}
+            SONARQUBE_URL=${{ inputs.sonarqube_server_url }}
+            SONARQUBE_PROJECT_NAME=${{ inputs.image_name }}
+            SONARQUBE_TOKEN=${{ secrets.sonarqube_token }}
+            SONARQUBE_VERSION=${{ inputs.version}}
+            ${{ inputs.dockerargs }}
 
       - name: Retrieve Sonarqube scan status
         shell: bash
         id: sonarqube_scan_status
         if: github.event_name == 'pull_request'
         env:
-          sonarqube_skip_scan: ${{inputs.sonarqube_skip_scan}}
+          sonarqube_skip_scan: ${{ inputs.sonarqube_skip_scan }}
         run: |
           if [ "$sonarqube_skip_scan" == "true" ]; then 
             echo "::set-output name=sonarqube_scan_status::SKIPPED"
-            echo "::set-output name=sonarqube_server_url::${{inputs.sonarqube_server_url}}"
-            echo "::set-output name=image_name::${{inputs.image_name}}"
+            echo "::set-output name=sonarqube_server_url::${{ inputs.sonarqube_server_url }}"
+            echo "::set-output name=image_name::${{ inputs.image_name }}"
             exit 0
           fi
 
           key=$(curl -s -q \
-            -u ${{secrets.sonarqube_token}}: \
-            "${{inputs.sonarqube_server_url}}/api/project_analyses/search?project=${{inputs.image_name}}" \
-            | jq -r '.analyses[] | select(.projectVersion=="${{inputs.version}}")' \
+            -u ${{ secrets.sonarqube_token }}: \
+            "${{ inputs.sonarqube_server_url }}/api/project_analyses/search?project=${{ inputs.image_name }}" \
+            | jq -r '.analyses[] | select(.projectVersion=="${{ inputs.version }}")' \
             | jq -r -s 'sort_by(.date) | last | .key')
 
           status=$(curl -s -q \
-            -u ${{secrets.sonarqube_token}}: \
-            "${{inputs.sonarqube_server_url}}/api/qualitygates/project_status?analysisId=$key" | jq -r '.projectStatus.status')
+            -u ${{ secrets.sonarqube_token }}: \
+            "${{ inputs.sonarqube_server_url }}/api/qualitygates/project_status?analysisId=$key" | jq -r '.projectStatus.status')
           
           echo "::set-output name=sonarqube_scan_status::$status"
-          echo "::set-output name=sonarqube_server_url::${{inputs.sonarqube_server_url}}"
-          echo "::set-output name=image_name::${{inputs.image_name}}"
+          echo "::set-output name=sonarqube_server_url::${{ inputs.sonarqube_server_url }}"
+          echo "::set-output name=image_name::${{ inputs.image_name }}"
 
   create-octopus-environment:
     name: Create an environment in Octopus
@@ -192,17 +182,17 @@ jobs:
     - name: Create Octopus environment
       uses: planday-corp/actions-octopus-environment-config@v2
       with: 
-        environment_name: "${{steps.set_environment_name.outputs.environment_name}}"
+        environment_name: "${{ steps.set_environment_name.outputs.environment_name }}"
         delete_environment: false
         environment_to_copy: "stable"
-        octopus_server_url: "${{inputs.octopus_server_url}}"
-        octopus_api_key: ${{secrets.octopus_api_key}}
+        octopus_server_url: "${{ inputs.octopus_server_url }}"
+        octopus_api_key: ${{ secrets.octopus_api_key }}
 
   create-deploy-release:
     name: Create and deploy a release in Octopus
     runs-on: self-hosted
     outputs:
-      release_number: ${{inputs.version}}
+      release_number: ${{ inputs.version }}
     # When previous jobs succeded and the branch isn't "main" or "master"
     if: ${{ contains(join(needs.*.result, ','), 'success') && 
       ! contains(fromJson('["refs/heads/main","refs/heads/master"]'), github.ref) }}
@@ -219,27 +209,24 @@ jobs:
       uses: OctopusDeploy/create-release-action@v1.1.1
       id: octopus_release
       with:
-        deploy_to: "${{steps.set_environment_name.outputs.environment_name}}"
+        deploy_to: "${{ steps.set_environment_name.outputs.environment_name }}"
         api_key: ${{ secrets.octopus_api_key }}
         server: ${{ inputs.octopus_server_url }}
         space: 'Default'
         project: ${{ inputs.octopus_project_name }}
-        release_number: ${{inputs.version}}
+        release_number: ${{ inputs.version }}
         progress: true
         ignore_existing: true
         packages: |
-          ${{inputs.image_name}}:${{inputs.version}}
-          helm:${{inputs.helm_version}}
-          planday-service-istio:${{inputs.helm_chart}}
-          certificate-and-gateway:${{inputs.gateway}}
+          ${{ inputs.image_name }}:${{ inputs.version }}
 
     - name: Retrieve SonarQube scan status
       id: sonarqube_scan_status
       if: always() && github.event_name == 'pull_request'
       run: |
-        echo "sonarqube_scan_status=${{needs.build-and-push.outputs.sonarqube_scan_status}}" >> $GITHUB_ENV
-        echo "sonarqube_server_url=${{needs.build-and-push.outputs.sonarqube_server_url}}" >> $GITHUB_ENV
-        echo "image_name=${{needs.build-and-push.outputs.image_name}}" >> $GITHUB_ENV
+        echo "sonarqube_scan_status=${{ needs.build-and-push.outputs.sonarqube_scan_status }}" >> $GITHUB_ENV
+        echo "sonarqube_server_url=${{ needs.build-and-push.outputs.sonarqube_server_url }}" >> $GITHUB_ENV
+        echo "image_name=${{ needs.build-and-push.outputs.image_name }}" >> $GITHUB_ENV
 
     - name: Retrieve Octopus release
       id: get_octopus_release
@@ -250,15 +237,15 @@ jobs:
 
         # Read project id and slug
         read -r project_id project_slug <  <(curl -s -q \
-          -H "X-Octopus-ApiKey: ${{secrets.octopus_api_key}}" \
+          -H "X-Octopus-ApiKey: ${{ secrets.octopus_api_key }}" \
           -H "Accept: application/json" \
-          "${{inputs.octopus_server_url}}/api/projects/all" \
-          | jq -r -M '.[] | select(.Name == "${{inputs.octopus_project_name}}") | [.Id,.Slug] | @tsv')
+          "${{ inputs.octopus_server_url }}/api/projects/all" \
+          | jq -r -M '.[] | select(.Name == "${{ inputs.octopus_project_name }}") | [.Id,.Slug] | @tsv')
 
         curl -s -q \
-          -H "X-Octopus-ApiKey: ${{secrets.octopus_api_key}}" \
+          -H "X-Octopus-ApiKey: ${{ secrets.octopus_api_key }}" \
           -H "Accept: application/json" \
-          "${{inputs.octopus_server_url}}/api/projects/$project_id/releases/${{inputs.version}}" \
+          "${{ inputs.octopus_server_url }}/api/projects/$project_id/releases/${{ inputs.version }}" \
           | jq -r -M '' > release.json
 
         # Read space id
@@ -268,7 +255,7 @@ jobs:
         release_packages="$(jq -c -r -M '.SelectedPackages' release.json)"
 
         # Reconstruct the release URL
-        release_url="${{inputs.octopus_server_url}}/app#/$space_id/projects/$project_slug/deployments/releases/${{inputs.version}}"
+        release_url="${{ inputs.octopus_server_url }}/app#/$space_id/projects/$project_slug/deployments/releases/${{ inputs.version }}"
 
         echo "release_url=$release_url" >> $GITHUB_ENV
         echo "release_packages=$release_packages" >> $GITHUB_ENV
@@ -286,10 +273,7 @@ jobs:
           //
           // | Name | Version | Package Reference Name |
           // | :---: | :---: | :---: |
-          // | Deploy Planday service to k8s | `3.4.0` | `helm` |
-          // | Deploy Planday service to k8s | `1.0.212` | `helm-chart-istio` |
-          // | Deploy Planday service to k8s | `1.0.212` | `certificate-and-gateway` |
-          // | Deploy Planday service to k8s | `2.1.160` | `dockerPackage` |
+          // | Deploy Planday service to k8s | `1.0.1` | `frontendPackage` |
           //
           //
           let md_table = `| Name | Version | Package Reference Name |
@@ -342,7 +326,7 @@ jobs:
           })
 
     - name: Save release number
-      run: echo ${{inputs.version}} > release_number.txt
+      run: echo ${{ inputs.version }} > release_number.txt
     - name: Upload release number
       uses: actions/upload-artifact@v3
       with:
@@ -350,7 +334,7 @@ jobs:
         path: release_number.txt
 
   create-aks-namespace-and-gateways:
-    name: Create a namespace and a gateway helm release in AKS
+    name: Create a namespace and a helm release in AKS
     runs-on: self-hosted
     steps:
     - name: Install Azure CLI
@@ -374,8 +358,8 @@ jobs:
     - name: Connect to the AKS cluster
       uses: azure/aks-set-context@v3
       with:
-        resource-group: ${{inputs.aks_resource_group}}
-        cluster-name: ${{inputs.aks_cluster_name}}
+        resource-group: ${{ inputs.aks_resource_group }}
+        cluster-name: ${{ inputs.aks_cluster_name }}
         admin: 'true'
 
     - name: Sanitize AKS namespace
@@ -384,34 +368,37 @@ jobs:
 
     - name: Check if AKS namespace already exists
       id: get_namespace
-      run: kubectl get namespace ${{steps.set_namespace_name.outputs.environment_name}}
+      run: kubectl get namespace ${{ steps.set_namespace_name.outputs.environment_name }}
       continue-on-error: true
 
     - name: Create AKS namespace
       if: ${{ failure() || success() }} && ${{ contains('test', steps.set_namespace_name.outputs.environment_name) }}
       run: |
-        if [[ ${{steps.get_namespace.outcome}} != 'success' ]]; then
-            echo "Creating ${{steps.set_namespace_name.outputs.environment_name}} namespace ..."
-            kubectl create namespace ${{steps.set_namespace_name.outputs.environment_name}}
-            kubectl label namespace/${{steps.set_namespace_name.outputs.environment_name}} environment=${{steps.set_namespace_name.outputs.environment_name}} istio-injection=enabled
+        if [[ ${{ steps.get_namespace.outcome }} != 'success' ]]; then
+            echo "Creating ${{ steps.set_namespace_name.outputs.environment_name }} namespace ..."
+            kubectl create namespace ${{ steps.set_namespace_name.outputs.environment_name }}
+            kubectl label namespace/${{ steps.set_namespace_name.outputs.environment_name }} environment=${{ steps.set_namespace_name.outputs.environment_name }} istio-injection=enabled
         fi
-    
-    - name: Create Helm release
-      uses: azure/k8s-bake@v2.1
+
+    - name: Log in to Azure Container Registry
+      uses: docker/login-action@v1.10.0
       with:
-        renderEngine: 'helm'
-        helmChart: 'helm-charts/istio-gateways/'
-        overrides: |     
-          tls.uniqueDnsName:"certificate-${{steps.set_namespace_name.outputs.environment_name}}"
-          tls.domains:"""{'*.headless-wp.$${{steps.set_namespace_name.outputs.environment_name}}.planday.cloud','*.${{steps.set_namespace_name.outputs.environment_name}}.planday.cloud',${{steps.set_namespace_name.outputs.environment_name}}.planday.cloud}"""
-          tls.hosts:"""{'*.${{steps.set_namespace_name.outputs.environment_name}}.planday.cloud',${{steps.set_namespace_name.outputs.environment_name}}.planday.cloud}"""
-          tls.httpsRedirect:"false"
-          gateways.internal.enabled:"true"
-          gateways.external.enabled:"false"
-        helm-version: 'latest' 
-      id: create_helm_release
-    
+        registry: ${{ inputs.registry }}
+        username: ${{ secrets.acr_username }}
+        password: ${{ secrets.acr_password }}
+
+    - name: Set up Helm
+      uses: azure/setup-helm@v3
+      with:
+        version: v3.10.0
+
+    - name: Add Helm repo
+      run: |
+        az acr helm repo add --name ${{ inputs.registry }}
+
     - name: Deploy Helm release
-      uses: Azure/k8s-deploy@v1
-      with:
-        manifests: ${{ steps.create_helm_release.outputs.manifestsBundle }}
+      run: |
+        namespace=$(echo ${{ steps.set_namespace_name.outputs.environment_name }} | tr "[:upper:]" "[:lower:]")
+        registry=$(echo ${{ inputs.registry }} | sed 's/.azurecr.io//g' )
+
+        helm upgrade ${{ inputs.helm_chart_name }} --install --namespace=$namespace --set image.name=${{ inputs.image_name }} --set image.tag=${{ inputs.image_version }} --set tls.uniqueDnsName="certificate-$namespace" --set tls.domains="""{'*.headless-wp.$namespace.planday.cloud','*.$namespace.planday.cloud',$namespace.planday.cloud}""" --set tls.hosts="""{'*.$namespace.planday.cloud',$namespace.planday.cloud}""" --set tls.httpsRedirect="false" --set gateways.internal.enabled="true" --set gateways.external.enabled="false" $registry/${{ inputs.helm_chart_name }}
