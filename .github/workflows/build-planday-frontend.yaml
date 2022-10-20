@@ -398,6 +398,7 @@ jobs:
 
     - name: Change Azure subscription
       run: |
+        az account list
         az account set --subscription ${{ inputs.container_registry_subscription }}
 
     - name: Add Helm repo
