@@ -72,23 +72,23 @@ on:
         required: true
 
     secrets:
-      acr_username: 
-        description: "Service Principal ID for Azure ACR"
+      acr_client_id:
+        description: "Client ID of 'acr-service-principal'."
         required: true
-      acr_password: 
-        description: "Service Principal password for Azure ACR"
+      acr_client_secret:
+        description: "Client Secret of 'acr-service-principal'."
         required: true
       octopus_api_key:
-        description: "API key of the Octopus server"
+        description: "API key of the Octopus server."
         required: true
       sonarqube_token:
-        description: "SonarQube server token"
+        description: "Token of the SonarQube server."
         required: true
-      client_id:
-        description: "Service Principal Client ID for Planday-github"
+      github_client_id:
+        description: "Client ID of 'planday-github'."
         required: true
       tenant_id:
-        description: "Service Principal Tenant ID for Planday-github"
+        description: "Planday Tenant ID."
         required: true
       
 
@@ -128,8 +128,8 @@ jobs:
         uses: docker/login-action@v1.10.0
         with:
           registry: ${{ inputs.container_registry_name }}
-          username: ${{ secrets.acr_username }}
-          password: ${{ secrets.acr_password }}
+          username: ${{ secrets.acr_client_id }}
+          password: ${{ secrets.acr_client_secret }}
 
       - name: Build and push Docker image to ACR
         uses: docker/build-push-action@v2
@@ -360,7 +360,7 @@ jobs:
     - name: Log in to Azure
       uses: azure/login@v1
       with:
-        client-id: ${{ secrets.client_id }}
+        client-id: ${{ secrets.github_client_id }}
         tenant-id: ${{ secrets.tenant_id }}
         subscription-id: ${{ inputs.aks_subscription }}
 
@@ -392,7 +392,7 @@ jobs:
     - name: Log in to Azure to update permissions
       uses: azure/login@v1
       with:
-        client-id: ${{ secrets.client_id }}
+        client-id: ${{ secrets.acr_client_id }}
         tenant-id: ${{ secrets.tenant_id }}
         subscription-id: ${{ inputs.container_registry_subscription }}
 
