@@ -58,6 +58,7 @@ on:
         description: "URL of the SonarQube server."
         required: true
       aks_subscription:
+        type: string
         description: "Subscription of the AKS cluster."
         default: "ef511dc7-0ed7-4df2-9195-338e66559492"
         required: false
