@@ -389,17 +389,9 @@ jobs:
             kubectl label namespace/${{ steps.set_namespace_name.outputs.environment_name }} environment=${{ steps.set_namespace_name.outputs.environment_name }} istio-injection=enabled
         fi
 
-    - name: Log in to Azure Container Registry
-      uses: docker/login-action@v1.10.0
-      with:
-        registry: ${{ inputs.container_registry_name }}
-        username: ${{ secrets.acr_username }}
-        password: ${{ secrets.acr_password }}
-
-    - name: Change Azure subscription
+    - name: Log in to Azure ACR
       run: |
-        az account list
-        az account set --subscription ${{ inputs.container_registry_subscription }}
+        az acr login -n ${{ inputs.container_registry_name }}
 
     - name: Add Helm repo
       run: |
