@@ -335,7 +335,7 @@ jobs:
 
   create-aks-namespace-and-gateways:
     name: Create a namespace and a helm release in AKS
-    runs-on: self-hosted
+    runs-on: 'ubuntu-latest'
     steps:
     - name: Install Azure CLI
       run: |
