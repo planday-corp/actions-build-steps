@@ -15,6 +15,7 @@ This reusable workflow will:
 | Name | Type | Required | Description |
 | :---: | :---: | :---: |  --- |
 | `image_name` | `string` | `true` | Name of the Docker image to build. (ex: `myapp`) |
+| `application_name` | `string` | `false` | Name of the application (ex: `Planday.Localization`). This value will be passed as the `APPLICATION_NAME` argument during docker build |
 | `docker_context` | `string` | `false` | Docker build context. Default is the default git context (current directory `.`) |
 | `dockerfile_path` | `string` | `false` | Path to the Dockerfile. Default `Dockerfile` |
 | `registry` | `string` | `true` | Azure Containers Registry to push the image to |
