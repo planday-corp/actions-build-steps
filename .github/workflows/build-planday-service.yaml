@@ -48,10 +48,6 @@ on:
         description: "Gateway version"
         default: '1.0.212'
         required: false
-      octopus_server_url:
-        type: string
-        description: "URL of the Octopus server"
-        required: true
       octopus_project_name:
         type: string
         description: "Name of the project in Octopus"
@@ -79,7 +75,10 @@ on:
         required: true
       octopus_api_key:
         description: "API key of the Octopus server"
-        required: true      
+        required: true
+      octopus_server_url:
+        description: "URL of the Octopus server"
+        required: true
       sonarqube_token:
         description: "SonarQube server token"
         required: true
@@ -174,7 +173,7 @@ jobs:
         environment_name: "${{steps.set_environment_name.outputs.environment_name}}"
         delete_environment: false
         environment_to_copy: "stable"
-        octopus_server_url: "${{inputs.octopus_server_url}}"
+        octopus_server_url: "${{secrets.octopus_server_url}}"
         octopus_api_key: ${{secrets.octopus_api_key}}
       
   create-deploy-release:
@@ -200,7 +199,7 @@ jobs:
       with:
         deploy_to: "${{steps.set_environment_name.outputs.environment_name}}"
         api_key: ${{ secrets.octopus_api_key }}
-        server: ${{ inputs.octopus_server_url }}
+        server: ${{ secrets.octopus_server_url }}
         space: 'Default'
         project: ${{ inputs.octopus_project_name }}
         release_number: ${{inputs.version}}
@@ -231,13 +230,13 @@ jobs:
         read -r project_id project_slug <  <(curl -s -q \
           -H "X-Octopus-ApiKey: ${{secrets.octopus_api_key}}" \
           -H "Accept: application/json" \
-          "${{inputs.octopus_server_url}}/api/projects/all" \
+          "${{secrets.octopus_server_url}}/api/projects/all" \
           | jq -r -M '.[] | select(.Name == "${{inputs.octopus_project_name}}") | [.Id,.Slug] | @tsv')
 
         curl -s -q \
           -H "X-Octopus-ApiKey: ${{secrets.octopus_api_key}}" \
           -H "Accept: application/json" \
-          "${{inputs.octopus_server_url}}/api/projects/$project_id/releases/${{inputs.version}}" \
+          "${{secrets.octopus_server_url}}/api/projects/$project_id/releases/${{inputs.version}}" \
           | jq -r -M '' > release.json
 
         # Read space id
@@ -247,7 +246,7 @@ jobs:
         release_packages="$(jq -c -r -M '.SelectedPackages' release.json)"
 
         # Reconstruct the release URL
-        release_url="${{inputs.octopus_server_url}}/app#/$space_id/projects/$project_slug/deployments/releases/${{inputs.version}}"
+        release_url="${{secrets.octopus_server_url}}/app#/$space_id/projects/$project_slug/deployments/releases/${{inputs.version}}"
 
         echo "release_url=$release_url" >> $GITHUB_ENV
         echo "release_packages=$release_packages" >> $GITHUB_ENV

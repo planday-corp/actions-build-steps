@@ -36,10 +36,6 @@ on:
         description: "Helm chart to use (defaults to 'certificate-and-gateway')."
         default: "certificate-and-gateway"
         required: false
-      octopus_server_url:
-        type: string
-        description: "URL of the Octopus server."
-        required: true
       octopus_project_name:
         type: string
         description: "Name of the Octopus project."
@@ -80,6 +76,9 @@ on:
         required: true
       octopus_api_key:
         description: "API key of the Octopus server."
+        required: true
+      octopus_server_url:
+        description: "URL of the Octopus server."
         required: true
       sonarqube_token:
         description: "Token of the SonarQube server."
@@ -141,7 +140,7 @@ jobs:
           build-args: |
             PACKAGE_VERSION=${{ inputs.frontend_image_version }}
             OCT_API_KEY=${{ secrets.octopus_api_key }}
-            OCT_URL=${{ inputs.octopus_server_url }}
+            OCT_URL=${{ secrets.octopus_server_url }}
             OCT_PROJECT_NAME=${{ inputs.octopus_project_name }}
             BUILD_REVISION=${{ github.run_number }}
             BUILD_BRANCH=${{ steps.get_branch_name.outputs.branch }}
@@ -194,7 +193,7 @@ jobs:
         environment_name: "${{ steps.set_environment_name.outputs.environment_name }}"
         delete_environment: false
         environment_to_copy: "stable"
-        octopus_server_url: "${{ inputs.octopus_server_url }}"
+        octopus_server_url: "${{ secrets.octopus_server_url }}"
         octopus_api_key: ${{ secrets.octopus_api_key }}
 
   create-deploy-release:
@@ -220,7 +219,7 @@ jobs:
       with:
         deploy_to: "${{ steps.set_environment_name.outputs.environment_name }}"
         api_key: ${{ secrets.octopus_api_key }}
-        server: ${{ inputs.octopus_server_url }}
+        server: ${{ secrets.octopus_server_url }}
         space: 'Default'
         project: ${{ inputs.octopus_project_name }}
         release_number: ${{ inputs.frontend_image_version }}
@@ -248,13 +247,13 @@ jobs:
         read -r project_id project_slug <  <(curl -s -q \
           -H "X-Octopus-ApiKey: ${{ secrets.octopus_api_key }}" \
           -H "Accept: application/json" \
-          "${{ inputs.octopus_server_url }}/api/projects/all" \
+          "${{ secrets.octopus_server_url }}/api/projects/all" \
           | jq -r -M '.[] | select(.Name == "${{ inputs.octopus_project_name }}") | [.Id,.Slug] | @tsv')
 
         curl -s -q \
           -H "X-Octopus-ApiKey: ${{ secrets.octopus_api_key }}" \
           -H "Accept: application/json" \
-          "${{ inputs.octopus_server_url }}/api/projects/$project_id/releases/${{ inputs.frontend_image_version }}" \
+          "${{ secrets.octopus_server_url }}/api/projects/$project_id/releases/${{ inputs.frontend_image_version }}" \
           | jq -r -M '' > release.json
 
         # Read space id
@@ -264,7 +263,7 @@ jobs:
         release_packages="$(jq -c -r -M '.SelectedPackages' release.json)"
 
         # Reconstruct the release URL
-        release_url="${{ inputs.octopus_server_url }}/app#/$space_id/projects/$project_slug/deployments/releases/${{ inputs.frontend_image_version }}"
+        release_url="${{ secrets.octopus_server_url }}/app#/$space_id/projects/$project_slug/deployments/releases/${{ inputs.frontend_image_version }}"
 
         echo "release_url=$release_url" >> $GITHUB_ENV
         echo "release_packages=$release_packages" >> $GITHUB_ENV
