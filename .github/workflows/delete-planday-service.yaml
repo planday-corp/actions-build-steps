@@ -12,10 +12,6 @@ on:
         - 'false'
   workflow_call:
     inputs:
-      octopus_server_url:
-        type: string
-        description: "URL of the Octopus server"
-        required: true
       aks_resource_group:
         type: string
         description: "Name of the AKS resource group"
@@ -27,6 +23,9 @@ on:
     secrets:
       octopus_api_key:
         description: "API key of the Octopus server"
+        required: true
+      octopus_server_url:
+        description: "URL of the Octopus server"
         required: true
       kubernetes_azure_credentials:
         description: 'Credentials of the Azure SP in json format: `{"clientId":"xxxxxxx","clientSecret":"XXXXXXXX","subscriptionId":"xxxxxx","tenantId":"xxxxx"}`'
@@ -46,7 +45,7 @@ jobs:
         environment_name: "${{steps.get_environment_name.outputs.environment_name}}"
         delete_environment: true
         environment_to_copy: "stable"
-        octopus_server_url: ${{ inputs.octopus_server_url }}
+        octopus_server_url: ${{ secrets.octopus_server_url }}
         octopus_api_key: ${{ secrets.octopus_api_key }}
   
   delete-kubernetes-resources:
