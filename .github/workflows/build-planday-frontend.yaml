@@ -49,10 +49,6 @@ on:
         description: "Whether to skip the Sonarqube scan or not (defaults to 'false')."
         default: false
         required: false
-      sonarqube_server_url:
-        type: string
-        description: "URL of the SonarQube server."
-        required: true
       aks_subscription:
         type: string
         description: "Subscription of the AKS cluster."
@@ -83,6 +79,9 @@ on:
       sonarqube_token:
         description: "Token of the SonarQube server."
         required: true
+      sonarqube_server_url:
+        description: "URL of the SonarQube server."
+        required: true
       github_client_id:
         description: "Client ID of 'planday-github'."
         required: true
@@ -101,7 +100,7 @@ jobs:
     runs-on: self-hosted
     outputs:
       sonarqube_scan_status: ${{ steps.sonarqube_scan_status.outputs.sonarqube_scan_status }}
-      sonarqube_server_url: ${{ steps.sonarqube_scan_status.outputs.sonarqube_server_url }}
+      sonarqube_server_url: ${{ secrets.sonarqube_server_url }}
       image_name: ${{ steps.sonarqube_scan_status.outputs.image_name }}
     steps:
       - uses: actions/checkout@v3 
@@ -145,7 +144,7 @@ jobs:
             BUILD_REVISION=${{ github.run_number }}
             BUILD_BRANCH=${{ steps.get_branch_name.outputs.branch }}
             BUILD_TIMESTAMP=${{ steps.get_date.outputs.date }}
-            SONARQUBE_URL=${{ inputs.sonarqube_server_url }}
+            SONARQUBE_URL=${{ secrets.sonarqube_server_url }}
             SONARQUBE_PROJECT_NAME=${{ inputs.frontend_image_name }}
             SONARQUBE_TOKEN=${{ secrets.sonarqube_token }}
             SONARQUBE_VERSION=${{ inputs.frontend_image_version}}
@@ -160,23 +159,21 @@ jobs:
         run: |
           if [ "$sonarqube_skip_scan" == "true" ]; then 
             echo "::set-output name=sonarqube_scan_status::SKIPPED"
-            echo "::set-output name=sonarqube_server_url::${{ inputs.sonarqube_server_url }}"
             echo "::set-output name=image_name::${{ inputs.frontend_image_name }}"
             exit 0
           fi
 
           key=$(curl -s -q \
             -u ${{ secrets.sonarqube_token }}: \
-            "${{ inputs.sonarqube_server_url }}/api/project_analyses/search?project=${{ inputs.frontend_image_name }}" \
+            "${{ secrets.sonarqube_server_url }}/api/project_analyses/search?project=${{ inputs.frontend_image_name }}" \
             | jq -r '.analyses[] | select(.projectVersion=="${{ inputs.frontend_image_version }}")' \
             | jq -r -s 'sort_by(.date) | last | .key')
 
           status=$(curl -s -q \
             -u ${{ secrets.sonarqube_token }}: \
-            "${{ inputs.sonarqube_server_url }}/api/qualitygates/project_status?analysisId=$key" | jq -r '.projectStatus.status')
+            "${{ secrets.sonarqube_server_url }}/api/qualitygates/project_status?analysisId=$key" | jq -r '.projectStatus.status')
           
           echo "::set-output name=sonarqube_scan_status::$status"
-          echo "::set-output name=sonarqube_server_url::${{ inputs.sonarqube_server_url }}"
           echo "::set-output name=image_name::${{ inputs.frontend_image_name }}"
 
   create-octopus-environment:
@@ -233,7 +230,6 @@ jobs:
       if: always() && github.event_name == 'pull_request'
       run: |
         echo "sonarqube_scan_status=${{ needs.build-and-push.outputs.sonarqube_scan_status }}" >> $GITHUB_ENV
-        echo "sonarqube_server_url=${{ needs.build-and-push.outputs.sonarqube_server_url }}" >> $GITHUB_ENV
         echo "image_name=${{ needs.build-and-push.outputs.image_name }}" >> $GITHUB_ENV
 
     - name: Retrieve Octopus release
@@ -306,7 +302,7 @@ jobs:
 
           `;
 
-          let sonarqube_project_url = process.env.sonarqube_server_url + '/dashboard?id=' + process.env.image_name
+          let sonarqube_project_url = ${{ secrets.sonarqube_server_url }} + '/dashboard?id=' + process.env.image_name
           let sonarqube_scan_status = process.env.sonarqube_scan_status
           let sonarqube_scan_status_symbol = sonarqube_scan_status == "OK" ? "✅" : "💥"
           let output_sonarqube = `# 🧊 SonarQube scan status 🧊
